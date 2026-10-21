@@ -1,0 +1,5 @@
+[
+  {"name": "qwen3:4b-instruct", "think": ""},
+  {"name": "qwen3.5:4b", "think": "false"},
+  {"name": "gemma4:e2b", "think": "false"}
+]

@@ -1,0 +1,8 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+
+# Index, log QC, dan apa pun yang bisa berisi data pribadi
+storage/
+data/private/

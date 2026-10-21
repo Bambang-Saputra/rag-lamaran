@@ -1,0 +1,33 @@
+{
+  "title": "Form Pendaftaran Magang (Simulasi)",
+  "fields": [
+    {"name": "nama", "label": "Nama lengkap", "kind": "fixed"},
+    {"name": "email", "label": "Email", "kind": "fixed", "format": "email"},
+    {"name": "telepon", "label": "Nomor HP", "kind": "fixed", "format": "telepon"},
+    {"name": "linkedin", "label": "URL LinkedIn", "kind": "fixed"},
+    {"name": "github", "label": "URL GitHub", "kind": "fixed"},
+
+    {"name": "universitas", "label": "Universitas", "kind": "factual",
+     "question": "Di universitas mana saya berkuliah?", "doc_types": ["cv", "transkrip"]},
+    {"name": "jurusan", "label": "Program studi / jurusan", "kind": "factual",
+     "question": "Apa program studi atau jurusan saya?", "doc_types": ["cv", "transkrip"]},
+    {"name": "ipk", "label": "IPK terakhir", "kind": "factual", "format": "ipk",
+     "question": "Berapa IPK kumulatif saya?", "doc_types": ["transkrip", "cv"]},
+    {"name": "skills", "label": "Technical skills", "kind": "factual",
+     "question": "Apa saja technical skills (bahasa pemrograman, library, tools) yang saya kuasai?",
+     "doc_types": ["cv"]},
+
+    {"name": "sertifikasi_relevan", "label": "Sertifikasi yang relevan dengan posisi", "kind": "open",
+     "question": "Sertifikasi atau pelatihan apa yang saya miliki yang relevan dengan posisi ini?",
+     "doc_types": ["sertifikat"]},
+    {"name": "project_relevan", "label": "Ceritakan project yang paling relevan dengan posisi ini", "kind": "open",
+     "question": "Ceritakan project saya yang paling relevan dengan posisi ini: apa masalahnya, apa yang saya kerjakan, dan hasilnya.",
+     "doc_types": ["project", "cv"]},
+    {"name": "pengalaman_organisasi", "label": "Pengalaman organisasi", "kind": "open",
+     "question": "Ceritakan pengalaman organisasi saya dan peran saya di sana.",
+     "doc_types": ["organisasi", "cv"]},
+    {"name": "motivasi", "label": "Kenapa tertarik dengan posisi ini?", "kind": "open",
+     "question": "Kenapa saya tertarik dengan posisi ini?",
+     "doc_types": ["esai"]}
+  ]
+}

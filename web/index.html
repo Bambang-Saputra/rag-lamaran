@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Form Magang Simulasi</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --text: #1f1f1d; --muted: #6b6a65; --border: #dcdad3;
+    --accent: #3c5bd6; --ok-bg: #e7f4e4; --ok: #2f6b1f; --warn-bg: #fbf0d9; --warn: #8a5a07;
+    --none-bg: #efeeea; --none: #5f5e5a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1b1a; --card: #242423; --text: #ecebe6; --muted: #a3a29c; --border: #3a3a38;
+      --accent: #8aa0ff; --ok-bg: #22361d; --ok: #b5dca4; --warn-bg: #3d2f12; --warn: #f1cc85;
+      --none-bg: #30302e; --none: #c4c2bb;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; display: grid; gap: 20px;
+         grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  h1 { font-size: 22px; margin: 0 0 4px; font-weight: 600; }
+  .note { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .field { margin-bottom: 18px; }
+  label { display: block; font-weight: 600; margin-bottom: 6px; }
+  input, textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+                    background: var(--bg); color: var(--text); font: inherit; }
+  textarea { min-height: 96px; resize: vertical; }
+  .needs_review input, .needs_review textarea { border-color: var(--warn); }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; font-size: 12px; }
+  .badge { padding: 1px 8px; border-radius: 999px; font-weight: 600; }
+  .badge.ok { background: var(--ok-bg); color: var(--ok); }
+  .badge.needs_review { background: var(--warn-bg); color: var(--warn); }
+  .badge.not_found { background: var(--none-bg); color: var(--none); }
+  .src { border: 1px solid var(--border); background: transparent; color: var(--accent); border-radius: 6px;
+         padding: 1px 7px; font-size: 12px; cursor: pointer; }
+  .flags { color: var(--muted); }
+  button.primary { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 10px 16px;
+                   font: inherit; font-weight: 600; cursor: pointer; }
+  button.primary:disabled { opacity: .6; cursor: wait; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 4px 0 20px; }
+  #status { color: var(--muted); font-size: 13px; }
+  aside { position: sticky; top: 16px; }
+  aside h2 { font-size: 16px; margin: 0 0 8px; }
+  #preview { white-space: pre-wrap; font-size: 13px; color: var(--text); max-height: 70vh; overflow: auto; }
+  #preview-meta { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 8px 0 20px; }
+</style>
+</head>
+<body>
+<main>
+  <section class="card">
+    <h1 id="form-title">Form Pendaftaran Magang (Simulasi)</h1>
+    <p class="note">Halaman ini simulasi untuk demo. Data tidak dikirim ke perusahaan mana pun.
+      Semua isian adalah draf dari dokumen kamu sendiri. Cek lagi sebelum dipakai.</p>
+
+    <div class="field">
+      <label for="position">Posisi yang dilamar</label>
+      <input id="position" placeholder="mis. Data Analyst Intern">
+    </div>
+    <div class="field">
+      <label for="jd">Deskripsi lowongan (opsional)</label>
+      <textarea id="jd" placeholder="Tempel deskripsi lowongan di sini"></textarea>
+    </div>
+    <div class="row">
+      <button class="primary" id="fill-btn">Isi otomatis dari dokumen saya</button>
+      <span id="status"></span>
+    </div>
+    <hr>
+
+    <form id="form"></form>
+    <div class="row">
+      <button class="primary" id="submit-btn" type="button">Kirim (simulasi)</button>
+      <span id="submit-status"></span>
+    </div>
+  </section>
+
+  <aside class="card">
+    <h2>Cuplikan sumber</h2>
+    <div id="preview-meta">Klik tombol sumber di bawah isian untuk melihat teks aslinya.</div>
+    <div id="preview"></div>
+  </aside>
+</main>
+
+<script>
+const STATUS_LABEL = { ok: "Terisi", needs_review: "Perlu dicek", not_found: "Tidak ditemukan" };
+let FORM = null;
+let draft = {};
+
+async function api(path, body) {
+  const res = await fetch(path, body ? {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+  } : undefined);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || res.statusText);
+  return data;
+}
+
+function renderForm() {
+  document.getElementById("form-title").textContent = FORM.title;
+  const form = document.getElementById("form");
+  form.innerHTML = "";
+  for (const f of FORM.fields) {
+    const wrap = document.createElement("div");
+    wrap.className = "field";
+    wrap.id = `field-${f.name}`;
+    const label = document.createElement("label");
+    label.htmlFor = `in-${f.name}`;
+    label.textContent = f.label;
+    const input = document.createElement(f.kind === "open" ? "textarea" : "input");
+    input.id = `in-${f.name}`;
+    input.name = f.name;
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    wrap.append(label, input, meta);
+    form.append(wrap);
+  }
+}
+
+function showResult(name, r) {
+  const wrap = document.getElementById(`field-${name}`);
+  if (!wrap) return;
+  wrap.className = `field ${r.status}`;
+  wrap.querySelector("input, textarea").value = r.value || "";
+  const meta = wrap.querySelector(".meta");
+  meta.innerHTML = "";
+  const badge = document.createElement("span");
+  badge.className = `badge ${r.status}`;
+  badge.textContent = STATUS_LABEL[r.status] || r.status;
+  meta.append(badge);
+  for (const s of r.sources || []) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "src";
+    btn.textContent = s.chunk_id ? `${s.file} hlm ${s.page}` : `${s.file} hlm ${s.page} (${s.method})`;
+    if (s.chunk_id) btn.onclick = () => showChunk(s.chunk_id);
+    meta.append(btn);
+  }
+  if (r.flags && r.flags.length) {
+    const flags = document.createElement("span");
+    flags.className = "flags";
+    flags.textContent = r.flags.join(", ");
+    if (r.relevance && r.relevance.reason) flags.title = `Cek relevansi: ${r.relevance.reason}`;
+    meta.append(flags);
+  }
+}
+
+async function showChunk(id) {
+  const c = await api(`/api/chunk?id=${encodeURIComponent(id)}`);
+  document.getElementById("preview-meta").textContent = `${c.file} | hlm ${c.page} | ${c.section} | ${c.chunk_id}`;
+  document.getElementById("preview").textContent = c.text;
+}
+
+document.getElementById("fill-btn").onclick = async () => {
+  const btn = document.getElementById("fill-btn");
+  const status = document.getElementById("status");
+  btn.disabled = true;
+  status.textContent = "Mencari di dokumen dan menyusun draf...";
+  try {
+    const results = await api("/api/autofill", {
+      position: document.getElementById("position").value,
+      job_description: document.getElementById("jd").value,
+    });
+    draft = {};
+    for (const [name, r] of Object.entries(results)) {
+      draft[name] = r.value || "";
+      showResult(name, r);
+    }
+    const counts = Object.values(results).reduce((a, r) => (a[r.status] = (a[r.status] || 0) + 1, a), {});
+    status.textContent = Object.entries(counts).map(([k, v]) => `${STATUS_LABEL[k]}: ${v}`).join(" · ");
+  } catch (e) {
+    status.textContent = `Gagal: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+document.getElementById("submit-btn").onclick = async () => {
+  const out = document.getElementById("submit-status");
+  if (!Object.keys(draft).length) { out.textContent = "Isi otomatis dulu supaya ada draf untuk dibandingkan."; return; }
+  const final = {};
+  for (const f of FORM.fields) final[f.name] = document.getElementById(`in-${f.name}`).value;
+  try {
+    const r = await api("/api/qc-log", { position: document.getElementById("position").value, draft, final });
+    out.textContent = `Simulasi: tidak ada yang dikirim. Log QC disimpan (${r.edited_fields}/${r.total_fields} isian kamu edit).`;
+  } catch (e) {
+    out.textContent = `Gagal menyimpan log: ${e.message}`;
+  }
+};
+
+api("/api/form").then(f => { FORM = f; renderForm(); })
+  .catch(e => { document.getElementById("status").textContent = `Gagal memuat form: ${e.message}`; });
+</script>
+</body>
+</html>
