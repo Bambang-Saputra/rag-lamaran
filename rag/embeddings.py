@@ -12,11 +12,10 @@ def embed_texts(texts: list[str], batch_size: int = 32) -> np.ndarray:
     vectors: list[list[float]] = []
     for i in range(0, len(texts), batch_size):
         try:
-            resp = requests.post(
-                f"{s.embed_base_url}/api/embed",
-                json={"model": s.embed_model, "input": texts[i:i + batch_size]},
-                timeout=s.request_timeout,
-            )
+            payload = {"model": s.embed_model, "input": texts[i:i + batch_size]}
+            if s.keep_alive:
+                payload["keep_alive"] = s.keep_alive
+            resp = requests.post(f"{s.embed_base_url}/api/embed", json=payload, timeout=s.request_timeout)
             resp.raise_for_status()
         except requests.RequestException as e:
             raise RuntimeError(

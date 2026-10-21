@@ -3,19 +3,43 @@ from __future__ import annotations
 
 import difflib
 import json
+import os
+import threading
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from rag.autofill import autofill, load_form
+from rag.autofill import autofill, draft_answers, load_form, parse_questions
 from rag.config import ROOT, get_settings
 from rag.index import load_index, load_profile
 from rag.pipeline import answer
+from rag.warmup import warmup
 
-app = FastAPI(title="RAG Lamaran (simulasi)")
 _cache: dict = {}
+_warm: dict = {"state": "belum", "timings": {}, "error": ""}
+
+
+def _warmup_in_background() -> None:
+    _warm["state"] = "memuat"
+    try:
+        _warm["timings"] = warmup(get_settings())
+        _warm["state"] = "siap"
+    except Exception as e:  # noqa: BLE001 - error apa pun harus terlihat di UI, bukan status "memuat" selamanya
+        _warm.update(state="gagal", error=f"{type(e).__name__}: {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Model dimuat di thread terpisah supaya halaman langsung bisa dibuka sambil menunggu.
+    if os.environ.get("WARMUP_ON_START", "true").lower() == "true":
+        threading.Thread(target=_warmup_in_background, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="RAG Lamaran (simulasi)", lifespan=lifespan)
 
 
 def _state():
@@ -53,9 +77,35 @@ class QCLogRequest(BaseModel):
     final: dict[str, str]
 
 
+class DraftRequest(BaseModel):
+    questions_text: str
+    position: str = ""
+    job_description: str = ""
+
+
 @app.get("/")
 def page():
     return FileResponse(ROOT / "web" / "index.html")
+
+
+@app.get("/api/status")
+def status():
+    s = get_settings()
+    return {**_warm, "llm_model": s.llm_model, "embed_model": s.embed_model, "keep_alive": s.keep_alive,
+            "relevance_check": s.relevance_check}
+
+
+@app.post("/api/draft")
+def api_draft(req: DraftRequest):
+    try:
+        questions = parse_questions(req.questions_text)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    if not questions:
+        raise HTTPException(400, "Belum ada pertanyaan. Tempel satu pertanyaan per baris.")
+    index, profile = _state()
+    return _run(draft_answers, questions, index, profile, position=req.position,
+                job_description=req.job_description)
 
 
 @app.get("/api/form")

@@ -1,11 +1,14 @@
-"""CLI: ingest, lihat chunk, retrieve (tanpa LLM), tanya-jawab, dan autofill.
+"""CLI: ingest, lihat chunk, retrieve (tanpa LLM), tanya-jawab, chat, autofill, dan draf pertanyaan bebas.
 
 Contoh:
     python cli.py ingest
     python cli.py chunks --type sertifikat
     python cli.py retrieve "sertifikat machine learning"
     python cli.py ask "Berapa IPK saya?" --type transkrip --short --save
+    python cli.py chat
     python cli.py autofill --position "Data Analyst Intern" --save
+    python cli.py draft --questions pertanyaan.txt --position "Data Analyst Intern"
+    python cli.py warmup
     python cli.py serve
 """
 from __future__ import annotations
@@ -17,11 +20,12 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from rag.autofill import load_form, autofill
+from rag.autofill import autofill, draft_answers, load_form, parse_questions
 from rag.config import ROOT, get_settings
 from rag.index import build_index, load_index, load_profile
 from rag.pipeline import answer
 from rag.retrieve import retrieve
+from rag.warmup import warmup
 
 # Konsol Windows default-nya cp1252; paksa UTF-8 supaya karakter non-ASCII tidak bikin crash.
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -75,14 +79,11 @@ def cmd_retrieve(args) -> None:
         print(f"\nDisimpan: {_save('retrieve', args.query, {'query': args.query, 'retrieved': results})}")
 
 
-def cmd_ask(args) -> None:
-    s = get_settings()
-    out = answer(args.question, load_index(s), doc_types=args.type, k=args.k,
-                 style="short" if args.short else "long")
-    _print_retrieved(out["retrieved"])
+def _print_answer(out: dict) -> None:
     print(f"\n--- Jawaban ({out['status']}, support={out['support']}) ---")
     print(out["answer"] or "(tidak ditemukan di dokumen)")
-    print("\nSumber:")
+    if out["sources"]:
+        print("\nSumber:")
     for src in out["sources"]:
         print(f"  - [{src['chunk_id']}] {src['file']} hlm {src['page']} | {src['section']}")
     if out["flags"]:
@@ -90,8 +91,90 @@ def cmd_ask(args) -> None:
     if out.get("relevance"):
         print(f"Cek relevansi: {out['relevance']['relevant']} ({out['relevance']['reason']})")
     print(f"Waktu: {out['timing_ms']}")
+
+
+def cmd_ask(args) -> None:
+    s = get_settings()
+    out = answer(args.question, load_index(s), doc_types=args.type, k=args.k,
+                 style="short" if args.short else "long")
+    _print_retrieved(out["retrieved"])
+    _print_answer(out)
     if args.save:
         print(f"\nDisimpan: {_save('ask', args.question, out)}")
+
+
+def _warmup_verbose(s) -> None:
+    print("Memuat model ke memori (pertama kali bisa sampai 1-2 menit)...")
+    timings = warmup(s)
+    print("Siap. " + ", ".join(f"{m}: {t} detik" for m, t in timings.items())
+          + f". Model disimpan di memori selama {s.keep_alive or 'default Ollama (5m)'}.")
+
+
+def cmd_warmup(args) -> None:
+    _warmup_verbose(get_settings())
+
+
+CHAT_HELP = ("Ketik pertanyaan tentang dokumen kamu. Perintah: /chunks (tampilkan/sembunyikan chunk), "
+             "/singkat (jawaban singkat/panjang), /keluar.")
+
+
+def run_chat(index, read=input, show_chunks: bool = False) -> None:
+    """Tanya-jawab berulang. Tiap pertanyaan dijawab sendiri dari dokumen (belum ada ingatan percakapan)."""
+    print(CHAT_HELP)
+    style = "long"
+    while True:
+        try:
+            question = read("\nKamu> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return
+        if not question:
+            continue
+        cmd = question.lower()
+        if cmd in ("/keluar", "keluar", "/exit", "exit", "quit"):
+            return
+        if cmd == "/chunks":
+            show_chunks = not show_chunks
+            print(f"Tampilkan chunk: {'ya' if show_chunks else 'tidak'}")
+            continue
+        if cmd == "/singkat":
+            style = "short" if style == "long" else "long"
+            print(f"Gaya jawaban: {'singkat' if style == 'short' else 'paragraf'}")
+            continue
+        try:
+            out = answer(question, index, style=style)
+        except RuntimeError as e:
+            print(f"Error: {e}")
+            continue
+        if show_chunks:
+            _print_retrieved(out["retrieved"])
+        _print_answer(out)
+
+
+def cmd_chat(args) -> None:
+    s = get_settings()
+    index = load_index(s)
+    if not args.no_warmup:
+        _warmup_verbose(s)
+    run_chat(index, show_chunks=args.chunks)
+
+
+def cmd_draft(args) -> None:
+    s = get_settings()
+    questions = parse_questions(Path(args.questions).read_text(encoding="utf-8"))
+    jd = Path(args.jd).read_text(encoding="utf-8") if args.jd else ""
+    results = draft_answers(questions, load_index(s), load_profile(s), position=args.position, job_description=jd)
+    for r in results:
+        src = ", ".join(x.get("chunk_id") or f"{x['file']} ({x.get('method')})" for x in r["sources"])
+        print(f"\n[{r['status']:<12}] ({r['kind']}) {r['question']}")
+        print(f"    {r['value'] or '-'}")
+        if src:
+            print(f"    sumber: {src}")
+        if r["flags"]:
+            print(f"    flags: {', '.join(r['flags'])}")
+    if args.save:
+        payload = {"position": args.position, "job_description": jd, "results": results}
+        print(f"\nDisimpan: {_save('draft', args.position or 'pertanyaan', payload)}")
 
 
 def cmd_autofill(args) -> None:
@@ -147,6 +230,20 @@ def main() -> None:
     a.add_argument("--form", help="File config form (default forms/magang_form.json)")
     a.add_argument("--save", action="store_true")
     a.set_defaults(fn=cmd_autofill)
+
+    d = sub.add_parser("draft", help="Draf jawaban untuk daftar pertanyaan dari form asli (satu per baris)")
+    d.add_argument("--questions", required=True, help="File teks berisi pertanyaan, satu per baris")
+    d.add_argument("--position", default="", help="Posisi yang dilamar")
+    d.add_argument("--jd", help="File teks deskripsi lowongan")
+    d.add_argument("--save", action="store_true")
+    d.set_defaults(fn=cmd_draft)
+
+    ch = sub.add_parser("chat", help="Tanya-jawab berulang di terminal")
+    ch.add_argument("--chunks", action="store_true", help="Tampilkan chunk ter-retrieve")
+    ch.add_argument("--no-warmup", action="store_true", help="Jangan muat model di awal")
+    ch.set_defaults(fn=cmd_chat)
+
+    sub.add_parser("warmup", help="Muat model ke memori sekarang").set_defaults(fn=cmd_warmup)
 
     sv = sub.add_parser("serve", help="Jalankan API + form simulasi")
     sv.add_argument("--host", default="127.0.0.1")

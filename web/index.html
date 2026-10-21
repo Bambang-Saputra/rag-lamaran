@@ -8,13 +8,13 @@
   :root {
     --bg: #f7f7f5; --card: #ffffff; --text: #1f1f1d; --muted: #6b6a65; --border: #dcdad3;
     --accent: #3c5bd6; --ok-bg: #e7f4e4; --ok: #2f6b1f; --warn-bg: #fbf0d9; --warn: #8a5a07;
-    --none-bg: #efeeea; --none: #5f5e5a;
+    --none-bg: #efeeea; --none: #5f5e5a; --bad: #a32d2d;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #1b1b1a; --card: #242423; --text: #ecebe6; --muted: #a3a29c; --border: #3a3a38;
       --accent: #8aa0ff; --ok-bg: #22361d; --ok: #b5dca4; --warn-bg: #3d2f12; --warn: #f1cc85;
-      --none-bg: #30302e; --none: #c4c2bb;
+      --none-bg: #30302e; --none: #c4c2bb; --bad: #f09595;
     }
   }
   * { box-sizing: border-box; }
@@ -23,7 +23,7 @@
          grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
   @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
   h1 { font-size: 22px; margin: 0 0 4px; font-weight: 600; }
-  .note { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
+  .note { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
   .field { margin-bottom: 18px; }
   label { display: block; font-weight: 600; margin-bottom: 6px; }
@@ -36,19 +36,37 @@
   .badge.ok { background: var(--ok-bg); color: var(--ok); }
   .badge.needs_review { background: var(--warn-bg); color: var(--warn); }
   .badge.not_found { background: var(--none-bg); color: var(--none); }
-  .src { border: 1px solid var(--border); background: transparent; color: var(--accent); border-radius: 6px;
-         padding: 1px 7px; font-size: 12px; cursor: pointer; }
+  .kind { color: var(--muted); }
+  .src, .ghost { border: 1px solid var(--border); background: transparent; color: var(--accent); border-radius: 6px;
+                 padding: 1px 7px; font-size: 12px; cursor: pointer; font-family: inherit; }
   .flags { color: var(--muted); }
   button.primary { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 10px 16px;
                    font: inherit; font-weight: 600; cursor: pointer; }
   button.primary:disabled { opacity: .6; cursor: wait; }
   .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 4px 0 20px; }
-  #status { color: var(--muted); font-size: 13px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  #model-status.gagal { color: var(--bad); }
+  .tabs { display: flex; gap: 6px; margin: 8px 0 18px; border-bottom: 1px solid var(--border); }
+  .tabs button { border: 0; background: transparent; color: var(--muted); padding: 8px 12px; font: inherit;
+                 font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
+  .panel[hidden] { display: none; }
+  .item { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 14px; }
+  .item .q { font-weight: 600; margin-bottom: 6px; }
+  #chat-log { display: flex; flex-direction: column; gap: 12px; max-height: 55vh; overflow: auto; margin-bottom: 12px; }
+  .msg { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .msg.user { align-self: flex-end; background: var(--bg); max-width: 85%; }
+  .msg.bot { max-width: 100%; }
+  .msg .who { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  .msg .text { white-space: pre-wrap; }
+  .chat-input { display: flex; gap: 8px; }
+  .chat-input input { flex: 1; }
+  .check { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; margin: 0; }
+  .check input { width: auto; }
   aside { position: sticky; top: 16px; }
   aside h2 { font-size: 16px; margin: 0 0 8px; }
   #preview { white-space: pre-wrap; font-size: 13px; color: var(--text); max-height: 70vh; overflow: auto; }
   #preview-meta { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
-  hr { border: 0; border-top: 1px solid var(--border); margin: 8px 0 20px; }
 </style>
 </head>
 <body>
@@ -57,6 +75,7 @@
     <h1 id="form-title">Form Pendaftaran Magang (Simulasi)</h1>
     <p class="note">Halaman ini simulasi untuk demo. Data tidak dikirim ke perusahaan mana pun.
       Semua isian adalah draf dari dokumen kamu sendiri. Cek lagi sebelum dipakai.</p>
+    <p class="muted">Model: <span id="model-status">mengecek...</span></p>
 
     <div class="field">
       <label for="position">Posisi yang dilamar</label>
@@ -66,28 +85,67 @@
       <label for="jd">Deskripsi lowongan (opsional)</label>
       <textarea id="jd" placeholder="Tempel deskripsi lowongan di sini"></textarea>
     </div>
-    <div class="row">
-      <button class="primary" id="fill-btn">Isi otomatis dari dokumen saya</button>
-      <span id="status"></span>
-    </div>
-    <hr>
 
-    <form id="form"></form>
-    <div class="row">
-      <button class="primary" id="submit-btn" type="button">Kirim (simulasi)</button>
-      <span id="submit-status"></span>
+    <div class="tabs" role="tablist">
+      <button type="button" data-tab="form-panel" class="active">Form simulasi</button>
+      <button type="button" data-tab="paste-panel">Tempel pertanyaan</button>
+      <button type="button" data-tab="chat-panel">Chat</button>
+    </div>
+
+    <div id="form-panel" class="panel">
+      <div class="row">
+        <button class="primary" id="fill-btn">Isi otomatis dari dokumen saya</button>
+        <span id="status" class="muted"></span>
+      </div>
+      <form id="form"></form>
+      <div class="row">
+        <button class="primary" id="submit-btn" type="button">Kirim (simulasi)</button>
+        <span id="submit-status" class="muted"></span>
+      </div>
+    </div>
+
+    <div id="paste-panel" class="panel" hidden>
+      <p class="note">Salin pertanyaan dari form lamaran asli, satu pertanyaan per baris (maksimal 20).
+        Draf jawaban bisa kamu edit, lalu salin ke form aslinya.</p>
+      <div class="field">
+        <label for="paste-questions">Pertanyaan dari form</label>
+        <textarea id="paste-questions" style="min-height: 160px" placeholder="Nama lengkap
+Email
+Berapa IPK terakhir Anda?
+Ceritakan pengalaman organisasi Anda"></textarea>
+      </div>
+      <div class="row">
+        <button class="primary" id="paste-btn">Susun draf jawaban</button>
+        <span id="paste-status" class="muted"></span>
+      </div>
+      <div id="paste-results"></div>
+    </div>
+
+    <div id="chat-panel" class="panel" hidden>
+      <p class="note">Tanya apa saja tentang dokumen kamu. Tiap pertanyaan dijawab sendiri dari dokumen
+        (sistem belum mengingat pertanyaan sebelumnya).</p>
+      <div id="chat-log"></div>
+      <div class="chat-input">
+        <input id="chat-input" placeholder="mis. Sertifikat apa yang saya punya terkait machine learning?">
+        <button class="primary" id="chat-btn">Kirim</button>
+      </div>
+      <div class="row" style="margin-top: 8px">
+        <label class="check"><input type="checkbox" id="chat-short"> Jawaban singkat</label>
+      </div>
     </div>
   </section>
 
   <aside class="card">
     <h2>Cuplikan sumber</h2>
-    <div id="preview-meta">Klik tombol sumber di bawah isian untuk melihat teks aslinya.</div>
+    <div id="preview-meta">Klik tombol sumber di bawah jawaban untuk melihat teks aslinya.</div>
     <div id="preview"></div>
   </aside>
 </main>
 
 <script>
 const STATUS_LABEL = { ok: "Terisi", needs_review: "Perlu dicek", not_found: "Tidak ditemukan" };
+const KIND_LABEL = { fixed: "dari profil", factual: "jawaban singkat", open: "jawaban paragraf",
+                     manual: "isi sendiri (bukan fakta di dokumen)" };
 let FORM = null;
 let draft = {};
 
@@ -100,50 +158,26 @@ async function api(path, body) {
   return data;
 }
 
-function renderForm() {
-  document.getElementById("form-title").textContent = FORM.title;
-  const form = document.getElementById("form");
-  form.innerHTML = "";
-  for (const f of FORM.fields) {
-    const wrap = document.createElement("div");
-    wrap.className = "field";
-    wrap.id = `field-${f.name}`;
-    const label = document.createElement("label");
-    label.htmlFor = `in-${f.name}`;
-    label.textContent = f.label;
-    const input = document.createElement(f.kind === "open" ? "textarea" : "input");
-    input.id = `in-${f.name}`;
-    input.name = f.name;
-    const meta = document.createElement("div");
-    meta.className = "meta";
-    wrap.append(label, input, meta);
-    form.append(wrap);
-  }
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
 }
 
-function showResult(name, r) {
-  const wrap = document.getElementById(`field-${name}`);
-  if (!wrap) return;
-  wrap.className = `field ${r.status}`;
-  wrap.querySelector("input, textarea").value = r.value || "";
-  const meta = wrap.querySelector(".meta");
+// Badge status, tombol sumber, dan flags. Dipakai oleh form, mode tempel, dan chat.
+function renderMeta(meta, r, extra) {
   meta.innerHTML = "";
-  const badge = document.createElement("span");
-  badge.className = `badge ${r.status}`;
-  badge.textContent = STATUS_LABEL[r.status] || r.status;
-  meta.append(badge);
+  meta.append(el("span", `badge ${r.status}`, STATUS_LABEL[r.status] || r.status));
+  if (extra) meta.append(extra);
   for (const s of r.sources || []) {
-    const btn = document.createElement("button");
+    const btn = el("button", "src", s.chunk_id ? `${s.file} hlm ${s.page}` : `${s.file} hlm ${s.page} (${s.method})`);
     btn.type = "button";
-    btn.className = "src";
-    btn.textContent = s.chunk_id ? `${s.file} hlm ${s.page}` : `${s.file} hlm ${s.page} (${s.method})`;
     if (s.chunk_id) btn.onclick = () => showChunk(s.chunk_id);
     meta.append(btn);
   }
   if (r.flags && r.flags.length) {
-    const flags = document.createElement("span");
-    flags.className = "flags";
-    flags.textContent = r.flags.join(", ");
+    const flags = el("span", "flags", r.flags.join(", "));
     if (r.relevance && r.relevance.reason) flags.title = `Cek relevansi: ${r.relevance.reason}`;
     meta.append(flags);
   }
@@ -155,23 +189,79 @@ async function showChunk(id) {
   document.getElementById("preview").textContent = c.text;
 }
 
+function counts(results) {
+  const c = results.reduce((a, r) => (a[r.status] = (a[r.status] || 0) + 1, a), {});
+  return Object.entries(c).map(([k, v]) => `${STATUS_LABEL[k]}: ${v}`).join(" · ");
+}
+
+function context() {
+  return { position: document.getElementById("position").value, job_description: document.getElementById("jd").value };
+}
+
+// ---------- tab ----------
+for (const tab of document.querySelectorAll(".tabs button")) {
+  tab.onclick = () => {
+    for (const t of document.querySelectorAll(".tabs button")) t.classList.toggle("active", t === tab);
+    for (const p of document.querySelectorAll(".panel")) p.hidden = p.id !== tab.dataset.tab;
+  };
+}
+
+// ---------- status model ----------
+async function pollStatus() {
+  const out = document.getElementById("model-status");
+  try {
+    const s = await api("/api/status");
+    const label = { belum: "belum dimuat", memuat: "sedang dimuat ke memori (pertama kali bisa 1-2 menit)...",
+                    siap: "siap", gagal: `gagal dimuat: ${s.error}` }[s.state] || s.state;
+    out.textContent = `${s.llm_model} + ${s.embed_model}, ${label}`
+      + (s.state === "siap" ? ` (disimpan di memori selama ${s.keep_alive || "5m"})` : "");
+    out.className = s.state;
+    if (s.state === "memuat") setTimeout(pollStatus, 3000);
+  } catch (e) {
+    out.textContent = `tidak bisa dicek: ${e.message}`;
+  }
+}
+
+// ---------- form simulasi ----------
+function renderForm() {
+  document.getElementById("form-title").textContent = FORM.title;
+  const form = document.getElementById("form");
+  form.innerHTML = "";
+  for (const f of FORM.fields) {
+    const wrap = el("div", "field");
+    wrap.id = `field-${f.name}`;
+    const label = el("label", "", f.label);
+    label.htmlFor = `in-${f.name}`;
+    const input = document.createElement(f.kind === "open" ? "textarea" : "input");
+    input.id = `in-${f.name}`;
+    input.name = f.name;
+    wrap.append(label, input, el("div", "meta"));
+    form.append(wrap);
+  }
+}
+
+function showResult(name, r) {
+  const wrap = document.getElementById(`field-${name}`);
+  if (!wrap) return;
+  wrap.className = `field ${r.status}`;
+  wrap.querySelector("input, textarea").value = r.value || "";
+  renderMeta(wrap.querySelector(".meta"), r);
+}
+
 document.getElementById("fill-btn").onclick = async () => {
   const btn = document.getElementById("fill-btn");
   const status = document.getElementById("status");
   btn.disabled = true;
   status.textContent = "Mencari di dokumen dan menyusun draf...";
+  const t0 = performance.now();
   try {
-    const results = await api("/api/autofill", {
-      position: document.getElementById("position").value,
-      job_description: document.getElementById("jd").value,
-    });
+    const results = await api("/api/autofill", context());
     draft = {};
     for (const [name, r] of Object.entries(results)) {
       draft[name] = r.value || "";
       showResult(name, r);
     }
-    const counts = Object.values(results).reduce((a, r) => (a[r.status] = (a[r.status] || 0) + 1, a), {});
-    status.textContent = Object.entries(counts).map(([k, v]) => `${STATUS_LABEL[k]}: ${v}`).join(" · ");
+    status.textContent = `${counts(Object.values(results))} · ${((performance.now() - t0) / 1000).toFixed(0)} detik`;
   } catch (e) {
     status.textContent = `Gagal: ${e.message}`;
   } finally {
@@ -192,8 +282,95 @@ document.getElementById("submit-btn").onclick = async () => {
   }
 };
 
+// ---------- tempel pertanyaan ----------
+async function copyText(text, btn) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    const tmp = el("textarea");
+    tmp.value = text;
+    document.body.append(tmp);
+    tmp.select();
+    document.execCommand("copy");
+    tmp.remove();
+  }
+  btn.textContent = "Tersalin";
+  setTimeout(() => { btn.textContent = "Salin"; }, 1500);
+}
+
+document.getElementById("paste-btn").onclick = async () => {
+  const btn = document.getElementById("paste-btn");
+  const status = document.getElementById("paste-status");
+  const text = document.getElementById("paste-questions").value;
+  const n = text.split("\n").filter(l => l.trim()).length;
+  if (!n) { status.textContent = "Tempel minimal satu pertanyaan dulu."; return; }
+  btn.disabled = true;
+  status.textContent = `Menyusun draf untuk ${n} pertanyaan...`;
+  const t0 = performance.now();
+  try {
+    const results = await api("/api/draft", { questions_text: text, ...context() });
+    const box = document.getElementById("paste-results");
+    box.innerHTML = "";
+    for (const r of results) {
+      const item = el("div", `item ${r.status}`);
+      const answerBox = el("textarea");
+      answerBox.value = r.value || "";
+      answerBox.style.minHeight = r.kind === "open" ? "96px" : "44px";
+      const meta = el("div", "meta");
+      const copy = el("button", "ghost", "Salin");
+      copy.type = "button";
+      copy.onclick = () => copyText(answerBox.value, copy);
+      renderMeta(meta, r, el("span", "kind", KIND_LABEL[r.kind] || r.kind));
+      meta.prepend(copy);
+      item.append(el("div", "q", r.question), answerBox, meta);
+      box.append(item);
+    }
+    status.textContent = `${counts(results)} · ${((performance.now() - t0) / 1000).toFixed(0)} detik`;
+  } catch (e) {
+    status.textContent = `Gagal: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// ---------- chat ----------
+async function sendChat() {
+  const input = document.getElementById("chat-input");
+  const btn = document.getElementById("chat-btn");
+  const question = input.value.trim();
+  if (!question || btn.disabled) return;
+  const log = document.getElementById("chat-log");
+  const user = el("div", "msg user");
+  user.append(el("div", "who", "Kamu"), el("div", "text", question));
+  const bot = el("div", "msg bot");
+  const botText = el("div", "text", "Mencari di dokumen...");
+  const meta = el("div", "meta");
+  bot.append(el("div", "who", "Sistem"), botText, meta);
+  log.append(user, bot);
+  log.scrollTop = log.scrollHeight;
+  input.value = "";
+  btn.disabled = true;
+  const t0 = performance.now();
+  try {
+    const style = document.getElementById("chat-short").checked ? "short" : "long";
+    const r = await api("/api/ask", { question, style });
+    botText.textContent = r.answer || "Tidak ditemukan di dokumen.";
+    renderMeta(meta, r, el("span", "kind", `${((performance.now() - t0) / 1000).toFixed(0)} detik`));
+  } catch (e) {
+    botText.textContent = `Gagal: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    log.scrollTop = log.scrollHeight;
+    input.focus();
+  }
+}
+
+document.getElementById("chat-btn").onclick = sendChat;
+document.getElementById("chat-input").addEventListener("keydown", e => { if (e.key === "Enter") sendChat(); });
+
 api("/api/form").then(f => { FORM = f; renderForm(); })
   .catch(e => { document.getElementById("status").textContent = `Gagal memuat form: ${e.message}`; });
+pollStatus();
 </script>
 </body>
 </html>

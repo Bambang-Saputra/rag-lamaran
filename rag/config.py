@@ -56,6 +56,7 @@ class Settings:
     max_chunk_chars: int
     max_context_chars: int
     request_timeout: int
+    keep_alive: str  # berapa lama Ollama menyimpan model di memori setelah dipakai, mis. "30m"; kosong = default Ollama
 
     def public(self) -> dict:
         """Snapshot setting untuk disimpan bersama output (tanpa API key)."""
@@ -88,4 +89,5 @@ def get_settings() -> Settings:
         max_chunk_chars=int(env("MAX_CHUNK_CHARS", "1200")),
         max_context_chars=int(env("MAX_CONTEXT_CHARS", "6000")),
         request_timeout=int(env("REQUEST_TIMEOUT", "120")),
+        keep_alive=env("KEEP_ALIVE", "30m").strip(),
     )

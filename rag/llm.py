@@ -52,6 +52,8 @@ def chat_json(system: str, user: str, schema: dict, model: str | None = None) ->
         # Hanya dikirim jika di-set: model tanpa mode thinking menolak parameter ini.
         if s.llm_think in ("true", "false"):
             payload["think"] = s.llm_think == "true"
+        if s.keep_alive:
+            payload["keep_alive"] = s.keep_alive
         data = _post(f"{s.llm_base_url}/api/chat", payload, headers={}, timeout=s.request_timeout)
         content = data["message"]["content"]
     elif s.llm_provider == "openai_compat":

@@ -59,6 +59,7 @@ def stub_chat(answer_fn, relevance=None):
 
 
 fake_chat = stub_chat(first_chunk_answer)
+ORIG_EMBED_TEXTS, ORIG_CHAT_JSON = embeddings.embed_texts, llm.chat_json
 embeddings.embed_texts = fake_embed
 llm.chat_json = fake_chat
 
@@ -269,6 +270,142 @@ def test_eval_model_smoke():
     assert set(summary["per_question"]) == {"f01", "c01", "u03"}
     meta = {"run_at": "x", "settings": SETTINGS.public(), "index": META}
     assert "| `stub` |" in render_markdown(meta, retrieval, [summary], questions)
+
+
+def test_keep_alive_sent_to_ollama():
+    sent = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"embeddings": [[1.0, 0.0]]}
+
+    def fake_post(url, json=None, **kwargs):
+        sent[url.rsplit("/", 1)[-1]] = json
+        return FakeResponse()
+
+    orig_requests_post, orig_llm_post = embeddings.requests.post, llm._post
+    embeddings.requests.post = fake_post
+    chat_payloads = []
+    llm._post = lambda url, payload, headers, timeout: (
+        chat_payloads.append(payload) or {"message": {"content": '{"answer": "", "status": "not_found", "sources": []}'}})
+    os.environ["KEEP_ALIVE"] = "45m"
+    try:
+        ORIG_EMBED_TEXTS(["tes"])
+        ORIG_CHAT_JSON("sys", "user", {})
+        os.environ["KEEP_ALIVE"] = ""
+        ORIG_CHAT_JSON("sys", "user", {})
+    finally:
+        embeddings.requests.post, llm._post = orig_requests_post, orig_llm_post
+        os.environ.pop("KEEP_ALIVE", None)
+    assert sent["embed"]["keep_alive"] == "45m"
+    assert chat_payloads[0]["keep_alive"] == "45m"
+    assert "keep_alive" not in chat_payloads[1]  # KEEP_ALIVE kosong = pakai default Ollama
+
+
+def test_parse_and_classify_questions():
+    from rag.autofill import MAX_QUESTIONS, classify_question, parse_questions
+    qs = parse_questions("1. Nama lengkap *\n- Email\n\n• Berapa IPK terakhir Anda?\nEmail\n"
+                         "Nama universitas\nCeritakan pengalaman organisasi Anda")
+    assert qs == ["Nama lengkap", "Email", "Berapa IPK terakhir Anda?", "Nama universitas",
+                  "Ceritakan pengalaman organisasi Anda"]
+    kinds = {q: classify_question(q) for q in qs}
+    assert kinds["Nama lengkap"]["kind"] == "fixed" and kinds["Nama lengkap"]["profile_key"] == "nama"
+    assert kinds["Email"]["profile_key"] == "email"
+    assert kinds["Berapa IPK terakhir Anda?"] == {"question": "Berapa IPK terakhir Anda?", "kind": "factual",
+                                                  "format": "ipk"}
+    assert kinds["Nama universitas"]["kind"] == "factual"  # bukan nama pelamar
+    assert kinds["Ceritakan pengalaman organisasi Anda"]["kind"] == "open"
+    assert classify_question("Nomor HP / WhatsApp aktif")["profile_key"] == "telepon"
+    assert classify_question("Apakah kamu bersedia magang onsite di Jakarta?")["kind"] == "manual"
+    assert classify_question("Berapa ekspektasi gaji Anda?")["kind"] == "manual"
+    try:
+        parse_questions("\n".join(f"pertanyaan {i}" for i in range(MAX_QUESTIONS + 1)))
+        raise AssertionError("seharusnya ditolak")
+    except ValueError:
+        pass
+
+
+def test_draft_answers_for_pasted_questions():
+    from rag.autofill import draft_answers
+    calls = []
+
+    def chat(system, user, schema, model=None):
+        calls.append(user)
+        return fake_chat(system, user, schema, model)
+
+    llm.chat_json = chat
+    try:
+        res = draft_answers(["Email", "Berapa IPK kumulatif saya?", "Ceritakan project yang relevan",
+                             "Apakah kamu bersedia magang onsite?"], INDEX, PROFILE, position="Data Analyst Intern")
+    finally:
+        llm.chat_json = fake_chat
+    assert [r["id"] for r in res] == ["q1", "q2", "q3", "q4"]
+    assert [r["kind"] for r in res] == ["fixed", "factual", "open", "manual"]
+    assert res[0]["value"] == "raka.pratama@example.com" and res[0]["status"] == "ok"
+    assert res[2]["sources"] and res[2]["question"] == "Ceritakan project yang relevan"
+    # Pertanyaan kesediaan tidak dijawab dan tidak dikirim ke LLM.
+    assert res[3]["status"] == "not_found" and res[3]["flags"] == ["isi_sendiri"]
+    assert not any("bersedia" in u for u in calls)
+
+
+def test_warmup_failure_is_reported():
+    import api
+    orig = api.warmup
+    api.warmup = lambda s: (_ for _ in ()).throw(ValueError("LLM_PROVIDER tidak dikenal: x"))
+    try:
+        api._warmup_in_background()
+    finally:
+        api.warmup = orig
+    assert api._warm["state"] == "gagal" and "ValueError" in api._warm["error"]
+    api._warm.update(state="belum", timings={}, error="")
+
+
+def test_autofill_unknown_kind_falls_back_to_rag():
+    form = {"fields": [{"name": "x", "label": "X", "kind": "salah_ketik", "question": "Berapa IPK kumulatif saya?"}]}
+    res = autofill(form, INDEX, PROFILE)
+    assert res["x"]["status"] in {"ok", "needs_review", "not_found"} and "retrieved" in res["x"]
+
+
+def test_api_draft_and_status():
+    from fastapi.testclient import TestClient
+    import api
+
+    api._cache.clear()
+    client = TestClient(api.app)
+    status = client.get("/api/status").json()
+    assert status["state"] in {"belum", "memuat", "siap", "gagal"} and status["keep_alive"]
+    res = client.post("/api/draft", json={"questions_text": "Email\nBerapa IPK saya?"})
+    assert res.status_code == 200 and [r["kind"] for r in res.json()] == ["fixed", "factual"]
+    assert client.post("/api/draft", json={"questions_text": "  \n "}).status_code == 400
+    many = "\n".join(f"pertanyaan {i}" for i in range(25))
+    assert client.post("/api/draft", json={"questions_text": many}).status_code == 400
+
+
+def test_chat_loop():
+    import cli
+    inputs = iter(["", "/singkat", "/chunks", "Berapa IPK kumulatif saya?", "/keluar", "tidak dibaca"])
+    calls = []
+
+    def chat(system, user, schema, model=None):
+        calls.append(system == RELEVANCE_SYSTEM)
+        return fake_chat(system, user, schema, model)
+
+    llm.chat_json = chat
+    try:
+        cli.run_chat(INDEX, read=lambda prompt: next(inputs))
+    finally:
+        llm.chat_json = fake_chat
+    assert calls.count(False) == 1  # tepat satu pertanyaan yang dijawab, lalu keluar
+    assert next(inputs) == "tidak dibaca"
+
+
+def test_warmup_loads_models():
+    from rag.warmup import warmup
+    timings = warmup(get_settings())
+    assert set(timings) == {SETTINGS.embed_model, SETTINGS.llm_model}
 
 
 def test_eval_relevance_separate_stage():
