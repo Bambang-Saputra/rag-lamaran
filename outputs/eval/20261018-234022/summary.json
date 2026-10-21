@@ -1,0 +1,949 @@
+{
+  "run_at": "2026-10-18T23:46:13",
+  "settings": {
+    "data_dir": "data/dummy",
+    "storage_dir": "storage/eval",
+    "llm_provider": "ollama",
+    "llm_model": "qwen3:4b-instruct",
+    "llm_base_url": "http://localhost:11434",
+    "temperature": "0.0",
+    "llm_think": "",
+    "embed_model": "qwen3-embedding:0.6b",
+    "embed_base_url": "http://localhost:11434",
+    "embed_query_instruction": "Given a question about a job applicant, retrieve passages from the applicant's documents that answer it",
+    "retrieval_mode": "hybrid",
+    "top_k": "5",
+    "max_chunk_chars": "1200",
+    "max_context_chars": "6000",
+    "request_timeout": "120"
+  },
+  "index": {
+    "built_at": "2026-10-18T23:38:51",
+    "data_dir": "data/dummy",
+    "embed_model": "qwen3-embedding:0.6b",
+    "max_chunk_chars": 1200,
+    "n_docs": 10,
+    "n_chunks": 34,
+    "by_type": {
+      "cv": {
+        "dokumen": 1,
+        "chunk": 8
+      },
+      "esai": {
+        "dokumen": 1,
+        "chunk": 1
+      },
+      "organisasi": {
+        "dokumen": 1,
+        "chunk": 3
+      },
+      "project": {
+        "dokumen": 2,
+        "chunk": 11
+      },
+      "sertifikat": {
+        "dokumen": 4,
+        "chunk": 4
+      },
+      "transkrip": {
+        "dokumen": 1,
+        "chunk": 7
+      }
+    },
+    "warnings": []
+  },
+  "retrieval": {
+    "bm25": {
+      "hit_at_k": 1,
+      "gold_coverage": 0.95,
+      "mrr": 0.883,
+      "n": 20,
+      "k": 5
+    },
+    "vector": {
+      "hit_at_k": 1,
+      "gold_coverage": 0.933,
+      "mrr": 0.787,
+      "n": 20,
+      "k": 5
+    },
+    "hybrid": {
+      "hit_at_k": 1,
+      "gold_coverage": 0.975,
+      "mrr": 0.917,
+      "n": 20,
+      "k": 5
+    }
+  },
+  "retrieval_details": [
+    {
+      "mode": "bm25",
+      "id": "f01",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "2/2",
+      "retrieved": [
+        "transkrip/transkrip_raka_pratama#c0",
+        "cv/cv_raka_pratama#c2"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "f02",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "2/2",
+      "retrieved": [
+        "cv/cv_raka_pratama#c2",
+        "project/prediksi_harga_rumah#c0",
+        "transkrip/transkrip_raka_pratama#c0",
+        "cv/cv_raka_pratama#c3",
+        "sertifikat/sert_public_speaking#c0"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "f03",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/2",
+      "retrieved": [
+        "transkrip/transkrip_raka_pratama#c0",
+        "sertifikat/sert_python_analisis_data#c0"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "f04",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "transkrip/transkrip_raka_pratama#c0"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "f05",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "cv/cv_raka_pratama#c7"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "f06",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "sertifikat/sert_dasar_machine_learning#c0",
+        "transkrip/transkrip_raka_pratama#c6",
+        "project/prediksi_harga_rumah#c0",
+        "cv/cv_raka_pratama#c1",
+        "sertifikat/sert_python_analisis_data#c0"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "f07",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "sertifikat/sert_python_analisis_data#c0",
+        "sertifikat/sert_backend_fastapi#c0",
+        "cv/cv_raka_pratama#c1",
+        "sertifikat/sert_dasar_machine_learning#c0",
+        "sertifikat/sert_public_speaking#c0"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "f08",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "transkrip/transkrip_raka_pratama#c6",
+        "cv/cv_raka_pratama#c2",
+        "project/prediksi_harga_rumah#c0",
+        "esai/motivasi_magang_data#c0",
+        "transkrip/transkrip_raka_pratama#c2"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "f09",
+      "hit": true,
+      "first_relevant_rank": 2,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "esai/motivasi_magang_data#c0",
+        "cv/cv_raka_pratama#c3",
+        "project/sistem_inventaris_lab#c3",
+        "transkrip/transkrip_raka_pratama#c3",
+        "organisasi/hima_informatika#c1"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "f10",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "cv/cv_raka_pratama#c3",
+        "project/sistem_inventaris_lab#c3",
+        "organisasi/hima_informatika#c1",
+        "esai/motivasi_magang_data#c0",
+        "project/sistem_inventaris_lab#c0"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "f11",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "cv/cv_raka_pratama#c5"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "f12",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "sertifikat/sert_backend_fastapi#c0",
+        "project/sistem_inventaris_lab#c4",
+        "sertifikat/sert_public_speaking#c0",
+        "sertifikat/sert_dasar_machine_learning#c0",
+        "sertifikat/sert_python_analisis_data#c0"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "c01",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "2/2",
+      "retrieved": [
+        "sertifikat/sert_python_analisis_data#c0",
+        "sertifikat/sert_dasar_machine_learning#c0",
+        "sertifikat/sert_public_speaking#c0",
+        "sertifikat/sert_backend_fastapi#c0",
+        "cv/cv_raka_pratama#c2"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "c02",
+      "hit": true,
+      "first_relevant_rank": 3,
+      "gold_covered": "1/2",
+      "retrieved": [
+        "cv/cv_raka_pratama#c4",
+        "project/prediksi_harga_rumah#c4",
+        "project/sistem_inventaris_lab#c4",
+        "project/prediksi_harga_rumah#c0",
+        "cv/cv_raka_pratama#c5"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "c03",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "3/3",
+      "retrieved": [
+        "transkrip/transkrip_raka_pratama#c6",
+        "sertifikat/sert_dasar_machine_learning#c0",
+        "cv/cv_raka_pratama#c1",
+        "project/prediksi_harga_rumah#c0",
+        "esai/motivasi_magang_data#c0"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "o01",
+      "hit": true,
+      "first_relevant_rank": 3,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "esai/motivasi_magang_data#c0",
+        "cv/cv_raka_pratama#c2",
+        "project/prediksi_harga_rumah#c4",
+        "project/prediksi_harga_rumah#c3",
+        "cv/cv_raka_pratama#c4"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "o02",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "2/2",
+      "retrieved": [
+        "cv/cv_raka_pratama#c6",
+        "organisasi/hima_informatika#c0",
+        "esai/motivasi_magang_data#c0",
+        "project/prediksi_harga_rumah#c4",
+        "project/sistem_inventaris_lab#c2"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "o03",
+      "hit": true,
+      "first_relevant_rank": 2,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "cv/cv_raka_pratama#c4",
+        "project/sistem_inventaris_lab#c3",
+        "project/sistem_inventaris_lab#c4",
+        "project/sistem_inventaris_lab#c1",
+        "project/sistem_inventaris_lab#c0"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "o04",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "esai/motivasi_magang_data#c0",
+        "cv/cv_raka_pratama#c1",
+        "sertifikat/sert_python_analisis_data#c0",
+        "project/prediksi_harga_rumah#c1",
+        "transkrip/transkrip_raka_pratama#c2"
+      ]
+    },
+    {
+      "mode": "bm25",
+      "id": "o05",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "esai/motivasi_magang_data#c0",
+        "organisasi/hima_informatika#c1"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "f01",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "2/2",
+      "retrieved": [
+        "transkrip/transkrip_raka_pratama#c0",
+        "cv/cv_raka_pratama#c2",
+        "transkrip/transkrip_raka_pratama#c5",
+        "cv/cv_raka_pratama#c3",
+        "cv/cv_raka_pratama#c5"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "f02",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "2/2",
+      "retrieved": [
+        "cv/cv_raka_pratama#c2",
+        "cv/cv_raka_pratama#c3",
+        "transkrip/transkrip_raka_pratama#c0",
+        "cv/cv_raka_pratama#c1",
+        "sertifikat/sert_public_speaking#c0"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "f03",
+      "hit": true,
+      "first_relevant_rank": 3,
+      "gold_covered": "2/2",
+      "retrieved": [
+        "cv/cv_raka_pratama#c1",
+        "transkrip/transkrip_raka_pratama#c3",
+        "transkrip/transkrip_raka_pratama#c0",
+        "cv/cv_raka_pratama#c2",
+        "transkrip/transkrip_raka_pratama#c5"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "f04",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "transkrip/transkrip_raka_pratama#c0",
+        "cv/cv_raka_pratama#c3",
+        "cv/cv_raka_pratama#c5",
+        "cv/cv_raka_pratama#c2",
+        "sertifikat/sert_dasar_machine_learning#c0"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "f05",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "cv/cv_raka_pratama#c7",
+        "transkrip/transkrip_raka_pratama#c0",
+        "cv/cv_raka_pratama#c2",
+        "cv/cv_raka_pratama#c1",
+        "cv/cv_raka_pratama#c3"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "f06",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "sertifikat/sert_dasar_machine_learning#c0",
+        "cv/cv_raka_pratama#c1",
+        "transkrip/transkrip_raka_pratama#c6",
+        "cv/cv_raka_pratama#c3",
+        "cv/cv_raka_pratama#c5"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "f07",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "sertifikat/sert_python_analisis_data#c0",
+        "organisasi/hima_informatika#c1",
+        "cv/cv_raka_pratama#c1",
+        "cv/cv_raka_pratama#c3",
+        "cv/cv_raka_pratama#c5"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "f08",
+      "hit": true,
+      "first_relevant_rank": 2,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "cv/cv_raka_pratama#c1",
+        "transkrip/transkrip_raka_pratama#c6",
+        "sertifikat/sert_python_analisis_data#c0",
+        "cv/cv_raka_pratama#c3",
+        "transkrip/transkrip_raka_pratama#c2"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "f09",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "cv/cv_raka_pratama#c3",
+        "esai/motivasi_magang_data#c0",
+        "transkrip/transkrip_raka_pratama#c3",
+        "cv/cv_raka_pratama#c1",
+        "project/sistem_inventaris_lab#c2"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "f10",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "cv/cv_raka_pratama#c3",
+        "project/sistem_inventaris_lab#c3",
+        "cv/cv_raka_pratama#c1",
+        "sertifikat/sert_public_speaking#c0",
+        "project/sistem_inventaris_lab#c2"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "f11",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "cv/cv_raka_pratama#c5",
+        "cv/cv_raka_pratama#c3",
+        "cv/cv_raka_pratama#c1",
+        "cv/cv_raka_pratama#c2",
+        "project/prediksi_harga_rumah#c5"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "f12",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "sertifikat/sert_backend_fastapi#c0",
+        "project/sistem_inventaris_lab#c2",
+        "cv/cv_raka_pratama#c5",
+        "project/sistem_inventaris_lab#c4",
+        "cv/cv_raka_pratama#c3"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "c01",
+      "hit": true,
+      "first_relevant_rank": 5,
+      "gold_covered": "1/2",
+      "retrieved": [
+        "cv/cv_raka_pratama#c2",
+        "cv/cv_raka_pratama#c3",
+        "transkrip/transkrip_raka_pratama#c0",
+        "cv/cv_raka_pratama#c1",
+        "sertifikat/sert_python_analisis_data#c0"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "c02",
+      "hit": true,
+      "first_relevant_rank": 2,
+      "gold_covered": "2/2",
+      "retrieved": [
+        "sertifikat/sert_backend_fastapi#c0",
+        "project/sistem_inventaris_lab#c2",
+        "project/sistem_inventaris_lab#c4",
+        "cv/cv_raka_pratama#c5",
+        "cv/cv_raka_pratama#c3"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "c03",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "2/3",
+      "retrieved": [
+        "sertifikat/sert_dasar_machine_learning#c0",
+        "cv/cv_raka_pratama#c1",
+        "cv/cv_raka_pratama#c5",
+        "transkrip/transkrip_raka_pratama#c6",
+        "cv/cv_raka_pratama#c3"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "o01",
+      "hit": true,
+      "first_relevant_rank": 5,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "sertifikat/sert_python_analisis_data#c0",
+        "esai/motivasi_magang_data#c0",
+        "cv/cv_raka_pratama#c3",
+        "cv/cv_raka_pratama#c1",
+        "project/prediksi_harga_rumah#c4"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "o02",
+      "hit": true,
+      "first_relevant_rank": 2,
+      "gold_covered": "1/2",
+      "retrieved": [
+        "cv/cv_raka_pratama#c3",
+        "cv/cv_raka_pratama#c6",
+        "sertifikat/sert_public_speaking#c0",
+        "project/sistem_inventaris_lab#c2",
+        "organisasi/hima_informatika#c1"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "o03",
+      "hit": true,
+      "first_relevant_rank": 2,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "project/sistem_inventaris_lab#c4",
+        "project/sistem_inventaris_lab#c3",
+        "project/sistem_inventaris_lab#c1",
+        "project/sistem_inventaris_lab#c2",
+        "project/sistem_inventaris_lab#c0"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "o04",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "esai/motivasi_magang_data#c0",
+        "cv/cv_raka_pratama#c3",
+        "cv/cv_raka_pratama#c1",
+        "sertifikat/sert_python_analisis_data#c0",
+        "cv/cv_raka_pratama#c5"
+      ]
+    },
+    {
+      "mode": "vector",
+      "id": "o05",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "esai/motivasi_magang_data#c0",
+        "cv/cv_raka_pratama#c1",
+        "transkrip/transkrip_raka_pratama#c5",
+        "cv/cv_raka_pratama#c3",
+        "cv/cv_raka_pratama#c5"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "f01",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "2/2",
+      "retrieved": [
+        "transkrip/transkrip_raka_pratama#c0",
+        "cv/cv_raka_pratama#c2",
+        "transkrip/transkrip_raka_pratama#c5",
+        "cv/cv_raka_pratama#c3",
+        "cv/cv_raka_pratama#c5"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "f02",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "2/2",
+      "retrieved": [
+        "cv/cv_raka_pratama#c2",
+        "cv/cv_raka_pratama#c3",
+        "transkrip/transkrip_raka_pratama#c0",
+        "sertifikat/sert_public_speaking#c0",
+        "project/prediksi_harga_rumah#c0"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "f03",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "2/2",
+      "retrieved": [
+        "transkrip/transkrip_raka_pratama#c0",
+        "sertifikat/sert_python_analisis_data#c0",
+        "cv/cv_raka_pratama#c1",
+        "transkrip/transkrip_raka_pratama#c3",
+        "cv/cv_raka_pratama#c2"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "f04",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "transkrip/transkrip_raka_pratama#c0",
+        "cv/cv_raka_pratama#c3",
+        "cv/cv_raka_pratama#c5",
+        "cv/cv_raka_pratama#c2",
+        "sertifikat/sert_dasar_machine_learning#c0"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "f05",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "cv/cv_raka_pratama#c7",
+        "transkrip/transkrip_raka_pratama#c0",
+        "cv/cv_raka_pratama#c2",
+        "cv/cv_raka_pratama#c1",
+        "cv/cv_raka_pratama#c3"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "f06",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "sertifikat/sert_dasar_machine_learning#c0",
+        "transkrip/transkrip_raka_pratama#c6",
+        "cv/cv_raka_pratama#c1",
+        "project/prediksi_harga_rumah#c0",
+        "sertifikat/sert_python_analisis_data#c0"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "f07",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "sertifikat/sert_python_analisis_data#c0",
+        "cv/cv_raka_pratama#c1",
+        "sertifikat/sert_backend_fastapi#c0",
+        "organisasi/hima_informatika#c1",
+        "sertifikat/sert_dasar_machine_learning#c0"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "f08",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "transkrip/transkrip_raka_pratama#c6",
+        "transkrip/transkrip_raka_pratama#c2",
+        "cv/cv_raka_pratama#c2",
+        "esai/motivasi_magang_data#c0",
+        "transkrip/transkrip_raka_pratama#c3"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "f09",
+      "hit": true,
+      "first_relevant_rank": 2,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "esai/motivasi_magang_data#c0",
+        "cv/cv_raka_pratama#c3",
+        "transkrip/transkrip_raka_pratama#c3",
+        "project/sistem_inventaris_lab#c3",
+        "cv/cv_raka_pratama#c1"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "f10",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "cv/cv_raka_pratama#c3",
+        "project/sistem_inventaris_lab#c3",
+        "organisasi/hima_informatika#c1",
+        "sertifikat/sert_public_speaking#c0",
+        "cv/cv_raka_pratama#c1"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "f11",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "cv/cv_raka_pratama#c5",
+        "cv/cv_raka_pratama#c3",
+        "cv/cv_raka_pratama#c1",
+        "cv/cv_raka_pratama#c2",
+        "project/prediksi_harga_rumah#c5"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "f12",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "sertifikat/sert_backend_fastapi#c0",
+        "project/sistem_inventaris_lab#c4",
+        "project/sistem_inventaris_lab#c2",
+        "cv/cv_raka_pratama#c5",
+        "sertifikat/sert_public_speaking#c0"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "c01",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "2/2",
+      "retrieved": [
+        "sertifikat/sert_python_analisis_data#c0",
+        "cv/cv_raka_pratama#c2",
+        "cv/cv_raka_pratama#c3",
+        "sertifikat/sert_dasar_machine_learning#c0",
+        "sertifikat/sert_public_speaking#c0"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "c02",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/2",
+      "retrieved": [
+        "project/sistem_inventaris_lab#c4",
+        "cv/cv_raka_pratama#c4",
+        "sertifikat/sert_backend_fastapi#c0",
+        "project/sistem_inventaris_lab#c2",
+        "cv/cv_raka_pratama#c5"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "c03",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "3/3",
+      "retrieved": [
+        "sertifikat/sert_dasar_machine_learning#c0",
+        "transkrip/transkrip_raka_pratama#c6",
+        "cv/cv_raka_pratama#c1",
+        "project/prediksi_harga_rumah#c0",
+        "organisasi/hima_informatika#c1"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "o01",
+      "hit": true,
+      "first_relevant_rank": 3,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "esai/motivasi_magang_data#c0",
+        "sertifikat/sert_python_analisis_data#c0",
+        "project/prediksi_harga_rumah#c4",
+        "cv/cv_raka_pratama#c2",
+        "cv/cv_raka_pratama#c1"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "o02",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "2/2",
+      "retrieved": [
+        "cv/cv_raka_pratama#c6",
+        "cv/cv_raka_pratama#c3",
+        "organisasi/hima_informatika#c0",
+        "project/sistem_inventaris_lab#c2",
+        "esai/motivasi_magang_data#c0"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "o03",
+      "hit": true,
+      "first_relevant_rank": 2,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "project/sistem_inventaris_lab#c4",
+        "project/sistem_inventaris_lab#c3",
+        "cv/cv_raka_pratama#c4",
+        "project/sistem_inventaris_lab#c1",
+        "project/sistem_inventaris_lab#c2"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "o04",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "esai/motivasi_magang_data#c0",
+        "cv/cv_raka_pratama#c1",
+        "sertifikat/sert_python_analisis_data#c0",
+        "transkrip/transkrip_raka_pratama#c2",
+        "transkrip/transkrip_raka_pratama#c3"
+      ]
+    },
+    {
+      "mode": "hybrid",
+      "id": "o05",
+      "hit": true,
+      "first_relevant_rank": 1,
+      "gold_covered": "1/1",
+      "retrieved": [
+        "esai/motivasi_magang_data#c0",
+        "organisasi/hima_informatika#c1",
+        "cv/cv_raka_pratama#c1",
+        "transkrip/transkrip_raka_pratama#c5",
+        "cv/cv_raka_pratama#c3"
+      ]
+    }
+  ],
+  "models": [
+    {
+      "model": "qwen3:4b-instruct",
+      "think": "",
+      "load_s": 47.0,
+      "memory": {
+        "size_gb": 3.53,
+        "vram_gb": 2.34,
+        "gpu_pct": 66
+      },
+      "n": 26,
+      "errors": 0,
+      "answer_accuracy": 0.9,
+      "abstain_accuracy": 0.833,
+      "false_abstain": 0.0,
+      "hallucination_caught": 1.0,
+      "json_valid": 1.0,
+      "citation_accuracy": 0.95,
+      "median_s": 8.8,
+      "mean_s": 9.3,
+      "per_question": {
+        "f01": true,
+        "f02": true,
+        "f03": true,
+        "f04": true,
+        "f05": true,
+        "f06": true,
+        "f07": true,
+        "f08": true,
+        "f09": true,
+        "f10": true,
+        "f11": true,
+        "f12": true,
+        "c01": true,
+        "c02": false,
+        "c03": true,
+        "o01": true,
+        "o02": true,
+        "o03": false,
+        "o04": true,
+        "o05": true,
+        "u01": true,
+        "u02": false,
+        "u03": true,
+        "u04": true,
+        "u05": true,
+        "u06": true
+      }
+    }
+  ]
+}
