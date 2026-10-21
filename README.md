@@ -59,7 +59,8 @@ CLI tanya-jawab dan form memakai fungsi inti yang sama, `rag.pipeline.answer()`.
 | `rag/retrieve.py` | Hybrid retrieval dengan Reciprocal Rank Fusion |
 | `rag/prompts.py`, `rag/llm.py` | Prompt, format konteks, panggilan LLM (output JSON) |
 | `rag/validate.py` | Cek sumber, grounding heuristik, cek relevansi, format isian |
-| `rag/autofill.py` | Routing per field berdasarkan `forms/magang_form.json` |
+| `rag/autofill.py` | Routing per field berdasarkan `forms/magang_form.json`, dan klasifikasi pertanyaan yang ditempel |
+| `rag/warmup.py` | Memuat model ke memori sebelum dipakai |
 | `cli.py`, `api.py`, `web/index.html` | Antarmuka |
 
 ## Model dan tools
@@ -110,14 +111,53 @@ python cli.py ingest                                   # bangun index
 python cli.py chunks --type cv                         # cek hasil chunking
 python cli.py retrieve "sertifikat machine learning"   # retrieval saja, tanpa LLM
 python cli.py ask "Berapa IPK saya?" --type transkrip --short --save
+python cli.py chat                                     # tanya-jawab berulang di terminal
 python cli.py autofill --position "Data Analyst Intern" --save
+python cli.py draft --questions pertanyaan.txt --position "Data Analyst Intern"
+python cli.py warmup                                   # muat model ke memori sekarang
 python cli.py serve                                    # buka http://127.0.0.1:8000
 python -m tests.test_offline                           # tes tanpa Ollama
 python -m evaluation.run_eval                          # evaluasi (lihat bagian Evaluasi)
 ```
 
 `--save` menyimpan output lengkap (chunk ter-retrieve, skor, jawaban, sumber, setting model) ke `outputs/examples/`.
-Tombol "Kirim (simulasi)" di web menyimpan draf dan hasil QC ke `storage/qc_log.jsonl`.
+
+Halaman web punya tiga tab:
+- Form simulasi: isi otomatis form contoh di `forms/magang_form.json`. Tombol "Kirim (simulasi)" hanya
+  menyimpan draf dan hasil QC ke `storage/qc_log.jsonl`.
+- Tempel pertanyaan: salin pertanyaan dari form lamaran asli (satu per baris, maksimal 20), lalu salin draf
+  jawabannya kembali ke form asli. Jenis tiap pertanyaan ditebak dari teksnya: isian profil (nama, email, HP),
+  jawaban singkat, jawaban paragraf, atau "isi sendiri" untuk kesediaan, gaji, dan jadwal yang tidak bisa
+  diambil dari dokumen.
+- Chat: tanya bebas tentang dokumen. Tiap pertanyaan dijawab sendiri; sistem belum mengingat percakapan.
+
+Sistem tidak menyentuh website lain. Untuk form lamaran asli, draf disalin manual.
+`serve` dan `chat` memuat model di awal, dan model disimpan di memori selama `KEEP_ALIVE` (default 30 menit).
+
+### Waktu respons (diukur 21 Okt 2026, GTX 1650 4 GB, `qwen3:4b-instruct`, cek relevansi aktif)
+
+| Kegiatan | Waktu |
+|---|---|
+| `ingest` 10 dokumen dummy (termasuk memuat model embedding) | 9,3 detik |
+| Memuat `qwen3:4b-instruct` dari kondisi tidak dimuat | 8,9 detik* |
+| Satu pertanyaan `ask` (retrieval 3,5 + generation 13,3 + cek relevansi 8,0) | 25,4 detik |
+| `chat`, 3 pertanyaan berturut-turut | 44 detik |
+| Form simulasi, 13 isian (8 lewat RAG) | 155-160 detik (88 detik tanpa cek relevansi) |
+| Tempel 9 pertanyaan dari form (6 lewat RAG) | 121 detik |
+
+\* File model kemungkinan masih ada di cache sistem operasi. Saat evaluasi, memuat model butuh 26-101 detik.
+
+Retrieval sendiri butuh 2,2-3,5 detik per pertanyaan, lebih lama dari perkiraan. Dugaan: model embedding dan
+LLM berebut VRAM (`ollama ps`: LLM 34% di CPU). Ini belum diselidiki.
+
+Temuan dari tes mode tempel pertanyaan dengan model asli:
+- "Apakah kamu bersedia magang onsite di Jakarta selama 6 bulan?" dijawab "Ya" tanpa bukti. Cek relevansi menandainya,
+  tetapi pertanyaan seperti ini sekarang dikenali sebagai "isi sendiri" dan tidak dikirim ke LLM.
+- "Jurusan" dijawab dengan nama universitas. Cek relevansi menandainya `jawaban_tidak_relevan`.
+- "Asal universitas" dijawab benar tetapi ikut ditandai tidak relevan (salah tandai yang sama polanya dengan evaluasi).
+- Jawaban singkat kadang menambahkan informasi lain, misalnya jurusan diisi "S1 Teknik Informatika, Universitas
+  Nusantara Digital, 3,62". Dugaan penyebab: petunjuk "daftar dipisah koma" di prompt jawaban singkat. Prompt belum
+  diubah karena hasil evaluasi di bawah terikat pada prompt yang sekarang.
 
 ## Konfigurasi
 
@@ -135,6 +175,8 @@ Tombol "Kirim (simulasi)" di web menyimpan draf dan hasil QC ke `storage/qc_log.
 | `TOP_K` | `5` | Jumlah chunk ke LLM |
 | `MAX_CHUNK_CHARS` | `1200` | Batas panjang chunk |
 | `MAX_CONTEXT_CHARS` | `6000` | Batas total konteks ke LLM |
+| `KEEP_ALIVE` | `30m` | Lama model disimpan di memori Ollama setelah dipakai; kosong = default Ollama (5m) |
+| `WARMUP_ON_START` | `true` | `serve` memuat model di background saat server nyala |
 
 ## Contoh output
 
@@ -161,6 +203,8 @@ jawaban, dan sumber. Sertakan contoh yang berhasil, yang gagal, dan satu pertany
 - Deteksi heading berbasis kata kunci dan huruf kapital, jadi heading dengan nama tak lazim tidak terdeteksi.
 - Ambang grounding (0.8 / 0.6) belum dievaluasi.
 - Tes offline memakai stub. Tes itu hanya membuktikan alurnya berjalan, bukan kualitas retrieval atau jawaban.
+- Jenis pertanyaan di mode tempel ditebak dengan pola kata (regex), jadi bisa salah untuk kalimat yang tidak biasa.
+- Chat belum punya ingatan percakapan; pertanyaan lanjutan seperti "yang kedua tadi apa?" tidak bisa dijawab.
 
 ## Evaluasi
 
