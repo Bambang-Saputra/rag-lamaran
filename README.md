@@ -64,23 +64,73 @@ pun dan tidak ada di repo.
 
 ## Arsitektur
 
-```
-Fase 1: indexing (python cli.py ingest)
-  data/<tipe>/*.pdf|md|txt
-    -> ekstraksi teks per halaman (PyMuPDF)
-    -> chunking sesuai tipe (per section / per dokumen / per paragraf) + metadata
-    -> embedding (Ollama) + BM25
-    -> storage/: chunks.jsonl, vectors.npy, profile.json, meta.json
+### Fase 1: indexing
 
-Fase 2: tiap pertanyaan atau kolom form
-  kolom form
-    -> fixed   : profile.json (regex dari CV, tanpa LLM)
-    -> manual  : kesediaan, gaji, jadwal (tidak dikirim ke LLM, diisi sendiri)
-    -> factual : RAG, jawaban singkat
-    -> open    : RAG, jawaban paragraf (posisi yang dilamar ikut di query)
-    -> validasi (sumber valid? didukung teks sumber? relevan? format benar?)
-    -> draf + status (ok / needs_review / not_found) + sumber -> QC manual
+Dijalankan sekali dengan `python cli.py ingest`, atau setiap kali dokumen berubah. Urutannya diatur oleh
+`rag/index.py`.
+
+```mermaid
+flowchart LR
+    A["Dokumen<br/>PDF, MD, TXT<br/>folder = tipe dokumen"] --> B["loaders.py<br/>teks per halaman"]
+    B --> C["chunking.py<br/>potong sesuai tipe dokumen"]
+    B --> P["profile.py<br/>nama, email, HP dengan regex"]
+    C --> E["embeddings.py<br/>vektor tiap chunk"]
+    C --> S1[("storage/chunks.jsonl")]
+    E --> S2[("storage/vectors.npy")]
+    P --> S3[("storage/profile.json")]
 ```
+
+Index BM25 tidak disimpan. Index itu dibangun ulang dari `chunks.jsonl` setiap kali index dimuat.
+
+### Fase 2: tiap kolom form atau pertanyaan
+
+Jenis isian ditentukan tanpa LLM: diambil dari `forms/magang_form.json` untuk form simulasi, atau ditebak dengan
+aturan (`classify_question` di `rag/autofill.py`) untuk pertanyaan yang ditempel dan kolom dari extension.
+
+```mermaid
+flowchart TD
+    Q["Kolom form atau pertanyaan"] --> K{"Jenis isian?"}
+    K -->|"fixed: nama, email, HP"| F["Ambil dari profile.json"]
+    K -->|"manual: bersedia, gaji, jadwal"| M["Dikosongkan<br/>flag isi_sendiri"]
+    K -->|"factual: jawaban singkat"| R["answer() lewat RAG<br/>lihat diagram berikutnya"]
+    K -->|"open: jawaban paragraf"| R
+    F --> V{"Format valid?<br/>email, HP, IPK"}
+    R --> V
+    V -->|ya| D["Draf + status + sumber"]
+    V -->|tidak| NR["status needs_review"]
+    NR --> D
+    M --> D
+    D --> QC(["Saya cek dan perbaiki sebelum dipakai"])
+```
+
+Pertanyaan yang jelas menanyakan pengalaman kerja atau pengalaman organisasi dibatasi ke tipe dokumen yang sesuai
+sebelum masuk `answer()`. Untuk jawaban paragraf, posisi yang dilamar ikut ditambahkan ke query.
+
+### Di dalam `answer()`
+
+```mermaid
+flowchart TD
+    A["Pertanyaan"] --> B["retrieve.py<br/>BM25 + vektor, digabung RRF, top-5"]
+    B --> C{"Hasil retrieve<br/>kosong?"}
+    C -->|ya| NF["not_found"]
+    C -->|tidak| D["prompts.py<br/>susun KONTEKS, tiap chunk diberi chunk_id"]
+    D --> E["llm.py<br/>qwen3:4b-instruct, output JSON"]
+    E --> G{"LLM menjawab<br/>tidak ditemukan?"}
+    G -->|ya| NF
+    G -->|tidak| H{"Sumber valid dan<br/>didukung teks?"}
+    H -->|ya| OK["status ok"]
+    H -->|tidak| NR["status needs_review"]
+    OK --> RC{"Cek relevansi:<br/>menjawab yang<br/>ditanya?"}
+    NR --> RC
+    RC -->|tidak| NR2["status needs_review<br/>flag jawaban_tidak_relevan"]
+    RC -->|ya| KEEP["status tetap"]
+```
+
+- "Sumber valid" berarti setiap `chunk_id` yang disebut LLM ada di hasil retrieve. "Didukung teks" berarti isi
+  jawaban muncul di teks sumber (substring atau overlap token di atas ambang).
+- Cek relevansi memanggil LLM sekali lagi dan hanya aktif kalau `RELEVANCE_CHECK=true` (default). Di form dan mode
+  tempel, cek ini dijalankan setelah semua jawaban selesai (dua tahap), supaya tidak mengubah jawaban. Penjelasannya
+  ada di [Cek relevansi](#cek-relevansi).
 
 Semua antarmuka (CLI, web, tempel pertanyaan, extension) memakai fungsi inti yang sama, `rag.pipeline.answer()`.
 Tiap file di `rag/` mengerjakan satu tahap, jadi tiap tahap bisa dites dan diganti sendiri. Contohnya, evaluasi
@@ -238,6 +288,28 @@ Cara kerjanya:
 - Pengalaman kerja dan pengalaman organisasi dipisah. Pertanyaan yang jelas menanyakan salah satunya dibatasi ke
   tipe dokumen yang sesuai dan diberi instruksi supaya model tidak mencampur keduanya. Dokumen pengalaman kerja
   selain CV (mis. surat keterangan magang) bisa ditaruh di folder `pengalaman/` atau `kerja/`.
+
+```mermaid
+flowchart TD
+    A["Klik extension<br/>atau Alt+Shift+D"] --> B["Baca label kolom kosong<br/>yang terlihat di halaman"]
+    B --> C{"Halaman menandai<br/>kolom wajib?"}
+    C -->|ya| W["Kolom wajib dikirim ke /api/draft<br/>lalu langsung diisi"]
+    C -->|tidak| P
+    W --> O{"Ada kolom<br/>tidak wajib?"}
+    O -->|ya| P["Panel kanan bawah:<br/>isi dari dokumen, isi sendiri, atau kosongkan"]
+    O -->|tidak| U
+    P -->|isi dari dokumen| X["Dikirim ke /api/draft<br/>lalu diisi"]
+    P -->|isi sendiri atau kosongkan| Y["Ditandai, tidak dikirim ke model"]
+    X --> U["Saya cek isian"]
+    Y --> U
+    U --> N{"Masih ada<br/>langkah berikutnya?"}
+    N -->|tidak| S(["Saya sendiri yang menekan Submit"])
+    N -->|ya| NX["Saya sendiri yang menekan Next"]
+    NX --> T{"Halaman reload?"}
+    T -->|"tidak: kolom baru terdeteksi,<br/>isi otomatis aktif"| B
+    T -->|ya| R["Klik extension lagi"]
+    R --> B
+```
 
 Pasang (Chrome atau Edge):
 
