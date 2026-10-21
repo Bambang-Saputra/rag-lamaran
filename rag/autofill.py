@@ -112,13 +112,30 @@ LONG_HINTS = re.compile(r"ceritakan|jelaskan|kenapa|mengapa|bagaimana|deskripsik
 MANUAL_HINTS = re.compile(r"bersedia|kesediaan|gaji|salary|ekspektasi|expected|kapan (anda|kamu|bisa|dapat) mulai"
                           r"|tanggal mulai|start date|ketersediaan|availability|willing")
 BULLET_RE = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s*")
+# Pengalaman kerja dan organisasi sama-sama ada di CV, dan model kecil cenderung mencampurnya. Pertanyaan yang jelas
+# menanyakan salah satunya dibatasi ke tipe dokumen yang sesuai dan diberi instruksi fokus. Folder `pengalaman/`
+# atau `kerja/` (mis. surat keterangan magang) ikut dicari untuk pengalaman kerja kalau ada.
+ORG_HINTS = re.compile(r"organisasi|kepanitiaan|himpunan|\bukm\b|komunitas|volunteer|relawan|kemahasiswaan")
+WORK_HINTS = re.compile(r"pengalaman (kerja|magang|profesional|freelance)|riwayat (kerja|pekerjaan)|pernah bekerja"
+                        r"|work experience|employment")
+EXPERIENCE_FOCUS = {
+    "organisasi": (["organisasi", "kepanitiaan", "cv"],
+                   "Bahas hanya pengalaman organisasi atau kepanitiaan, bukan pengalaman kerja."),
+    "kerja": (["cv", "pengalaman", "kerja"],
+              "Bahas hanya pengalaman kerja (termasuk asisten, freelance, atau magang), bukan organisasi."),
+}
+
+
+def clean_question(line: str) -> str:
+    """Buang nomor/bullet di depan dan tanda wajib (*) di belakang."""
+    return BULLET_RE.sub("", line).strip().rstrip("*").strip()
 
 
 def parse_questions(text: str) -> list[str]:
-    """Satu pertanyaan per baris. Nomor/bullet di depan dan tanda wajib (*) di belakang dibuang."""
+    """Satu pertanyaan per baris, tanpa duplikat, maksimal MAX_QUESTIONS."""
     questions = []
     for line in text.splitlines():
-        q = BULLET_RE.sub("", line).strip().rstrip("*").strip()
+        q = clean_question(line)
         if q and q not in questions:
             questions.append(q)
     if len(questions) > MAX_QUESTIONS:
@@ -140,12 +157,29 @@ def classify_question(question: str) -> dict:
     fmt = next((name for name, pattern in FORMAT_KEYWORDS if pattern.search(q)), None)
     if fmt:
         field["format"] = fmt
+    org, work = bool(ORG_HINTS.search(q)), bool(WORK_HINTS.search(q))
+    if org != work:  # kalau dua-duanya disebut, jangan dibatasi
+        doc_types, focus = EXPERIENCE_FOCUS["organisasi" if org else "kerja"]
+        field["doc_types"] = doc_types
+        field["question"] = f"{question} {focus}"
     return field
 
 
 def draft_answers(questions: list[str], index: Index, profile: dict, *, position: str = "",
-                  job_description: str = "") -> list[dict]:
-    """Draf jawaban untuk pertanyaan bebas (mis. disalin dari form lamaran asli). Dokumen dicari tanpa filter tipe."""
-    fields = [{"name": f"q{i}", "label": q, **classify_question(q)} for i, q in enumerate(questions, start=1)]
+                  job_description: str = "", long_questions: set[str] | None = None) -> list[dict]:
+    """Draf jawaban untuk pertanyaan bebas (mis. disalin dari form lamaran asli). Dokumen dicari tanpa filter tipe,
+    kecuali pertanyaan pengalaman kerja/organisasi (lihat EXPERIENCE_FOCUS).
+
+    long_questions: pertanyaan yang kolomnya multiline (textarea). Kalau tebakan dari teks bilang jawaban singkat,
+    pertanyaan ini tetap dijawab sebagai paragraf, karena bentuk kolomnya lebih bisa dipercaya.
+    """
+    long_questions = long_questions or set()
+    fields = []
+    for i, q in enumerate(questions, start=1):
+        field = {"name": f"q{i}", "label": q, **classify_question(q)}
+        if field["kind"] == "factual" and q in long_questions:
+            field["kind"] = "open"
+            field.pop("format", None)
+        fields.append(field)
     results = autofill({"fields": fields}, index, profile, position=position, job_description=job_description)
     return [{"id": f["name"], "question": f["label"], "kind": f["kind"], **results[f["name"]]} for f in fields]

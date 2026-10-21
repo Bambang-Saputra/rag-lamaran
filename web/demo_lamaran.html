@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo Lamaran Magang</title>
+<style>
+  :root { --bg: #f4f5f7; --card: #fff; --text: #1d2330; --muted: #667085; --border: #d0d5dd; --accent: #0f766e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #15181d; --card: #1e232b; --text: #e8eaed; --muted: #9aa3b2; --border: #343b46; --accent: #2dd4bf; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 system-ui, sans-serif; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
+  .banner { background: #fff4d6; color: #6b4a00; border: 1px solid #f2d37a; border-radius: 8px; padding: 8px 12px;
+            font-size: 13px; margin-bottom: 16px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .steps { display: flex; gap: 8px; margin: 16px 0; font-size: 13px; }
+  .steps span { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  .steps span.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .group { margin-bottom: 16px; }
+  .group > label, .q { display: block; font-weight: 600; margin-bottom: 6px; }
+  input, textarea, select { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+                            background: var(--bg); color: var(--text); font: inherit; }
+  textarea { min-height: 96px; resize: vertical; }
+  .req { color: #d92d20; }
+  .actions { display: flex; gap: 10px; justify-content: space-between; margin-top: 8px; }
+  button { border: 0; border-radius: 8px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+  .primary { background: var(--accent); color: #fff; }
+  .secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  #state { margin-top: 20px; font-size: 12px; white-space: pre-wrap; background: var(--card); border: 1px dashed var(--border);
+           border-radius: 8px; padding: 10px; color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner">Halaman demo fiktif untuk menguji extension RAG Lamaran. Perusahaan ini tidak ada,
+    dan tidak ada data yang dikirim ke mana pun.</div>
+  <h1>PT Contoh Karya Digital: Program Magang Data</h1>
+  <p class="muted">Lengkapi formulir berikut. Kolom bertanda <span class="req">*</span> wajib diisi.</p>
+
+  <div class="steps"><span id="s1" class="active">1. Data diri</span><span id="s2">2. Pengalaman</span><span id="s3">3. Selesai</span></div>
+
+  <form id="apply" class="card" onsubmit="return false">
+    <!-- Langkah 1: format label sengaja dibuat beragam seperti di website sungguhan -->
+    <section id="step1">
+      <div class="group">
+        <label for="fullName">Nama lengkap <span class="req">*</span></label>
+        <input id="fullName" name="full_name" autocomplete="off">
+      </div>
+      <div class="group">
+        <label>Alamat email <span class="req">*</span>
+          <input type="email" name="email" autocomplete="off">
+        </label>
+      </div>
+      <div class="group">
+        <span class="q" id="waLabel">Nomor WhatsApp aktif <span class="req">*</span></span>
+        <input aria-labelledby="waLabel" name="whatsapp" autocomplete="off">
+      </div>
+      <div class="group">
+        <div class="q">Asal universitas <span class="req">*</span></div>
+        <input name="university" autocomplete="off">
+      </div>
+      <div class="group">
+        <input name="major" placeholder="Program studi / jurusan" aria-label="Program studi / jurusan" autocomplete="off">
+      </div>
+      <div class="group">
+        <label for="gpa">IPK terakhir (skala 4,00) <span class="req">*</span></label>
+        <input id="gpa" name="gpa" autocomplete="off">
+      </div>
+      <div class="actions">
+        <span></span>
+        <button type="button" class="primary" id="next1">Selanjutnya</button>
+      </div>
+    </section>
+
+    <!-- Langkah 2 -->
+    <section id="step2" hidden>
+      <div class="group">
+        <label for="project">Ceritakan project yang paling relevan dengan posisi ini <span class="req">*</span></label>
+        <textarea id="project" name="project"></textarea>
+      </div>
+      <div class="group">
+        <label for="work">Pengalaman kerja / magang</label>
+        <textarea id="work" name="work_experience"></textarea>
+      </div>
+      <div class="group">
+        <label for="org">Pengalaman organisasi atau kepanitiaan</label>
+        <textarea id="org" name="organization"></textarea>
+      </div>
+      <div class="group">
+        <label for="why">Kenapa kamu tertarik dengan program magang ini? <span class="req">*</span></label>
+        <textarea id="why" name="motivation"></textarea>
+      </div>
+      <div class="group">
+        <label for="onsite">Apakah kamu bersedia magang onsite di Jakarta selama 6 bulan? <span class="req">*</span></label>
+        <select id="onsite" name="onsite"><option value="">Pilih</option><option>Ya</option><option>Tidak</option></select>
+      </div>
+      <div class="group">
+        <label for="cv">Unggah CV (PDF) <span class="req">*</span></label>
+        <input type="file" id="cv" name="cv" accept=".pdf">
+      </div>
+      <div class="actions">
+        <button type="button" class="secondary" id="back2">Kembali</button>
+        <button type="button" class="primary" id="submitBtn">Kirim lamaran</button>
+      </div>
+    </section>
+
+    <section id="step3" hidden>
+      <p><strong>Simulasi selesai.</strong> Di website sungguhan, tombol "Kirim lamaran" akan mengirim data ke perusahaan.
+        Di halaman demo ini tidak ada yang dikirim.</p>
+      <button type="button" class="secondary" id="back3">Kembali ke langkah 2</button>
+    </section>
+  </form>
+
+  <!-- Meniru state framework (React/Vue): hanya berubah lewat event input/change. Kalau extension cuma mengubah
+       .value tanpa event, panel ini tetap kosong dan isian akan hilang saat form dikirim. -->
+  <div id="state">State form (yang tercatat oleh halaman): {}</div>
+</div>
+
+<script>
+const state = {};
+const show = (n) => {
+  for (const i of [1, 2, 3]) {
+    document.getElementById(`step${i}`).hidden = i !== n;
+    document.getElementById(`s${i}`).classList.toggle("active", i === n);
+  }
+  window.scrollTo(0, 0);
+};
+const render = () => {
+  document.getElementById("state").textContent = "State form (yang tercatat oleh halaman): " + JSON.stringify(state, null, 2);
+};
+document.getElementById("apply").addEventListener("input", (e) => {
+  if (e.target.name && e.target.type !== "file") { state[e.target.name] = e.target.value; render(); }
+});
+document.getElementById("apply").addEventListener("change", (e) => {
+  if (e.target.name && e.target.type !== "file") { state[e.target.name] = e.target.value; render(); }
+});
+document.getElementById("next1").onclick = () => show(2);
+document.getElementById("back2").onclick = () => show(1);
+document.getElementById("submitBtn").onclick = () => show(3);
+document.getElementById("back3").onclick = () => show(2);
+render();
+</script>
+</body>
+</html>

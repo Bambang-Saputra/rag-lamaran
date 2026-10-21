@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "RAG Lamaran: draf form",
+  "version": "0.1.0",
+  "description": "Mengisi draf form lamaran dari dokumen pribadi lewat server RAG lokal. Tidak pernah menekan Next atau Submit.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "RAG Lamaran: isi draf" },
+  "commands": {
+    "isi-draf": {
+      "suggested_key": { "default": "Alt+Shift+D" },
+      "description": "Isi draf di halaman ini"
+    }
+  }
+}

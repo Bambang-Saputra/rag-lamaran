@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<style>
+  body { width: 320px; margin: 0; padding: 14px; font: 13px/1.5 system-ui, sans-serif; color: #1f2937; }
+  h1 { font-size: 15px; margin: 0 0 8px; }
+  label { display: block; font-weight: 600; margin: 10px 0 4px; }
+  input { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font: inherit; }
+  button { width: 100%; margin-top: 12px; padding: 9px; border: 0; border-radius: 8px; background: #0f766e; color: #fff;
+           font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .6; cursor: wait; }
+  .muted { color: #6b7280; font-size: 12px; }
+  #server-status, #status { margin-top: 10px; white-space: pre-wrap; }
+  .error { color: #991b1b; }
+  label.check { display: flex; gap: 6px; align-items: flex-start; font-weight: 400; margin-top: 12px; }
+  label.check input { width: auto; margin-top: 3px; }
+</style>
+</head>
+<body>
+  <h1>RAG Lamaran: draf form</h1>
+  <p class="muted">Mengisi kolom kosong di halaman ini dari dokumen kamu lewat server lokal. Kolom wajib (*) langsung
+    diisi; untuk kolom tidak wajib kamu ditanya dulu. Extension tidak pernah menekan Next atau Submit.</p>
+  <label for="position">Posisi yang dilamar</label>
+  <input id="position" placeholder="mis. Data Analyst Intern">
+  <label for="server">Server lokal</label>
+  <input id="server">
+  <div id="server-status" class="muted">Mengecek server...</div>
+  <label class="check"><input type="checkbox" id="auto-next"> Isi otomatis kolom baru setelah kamu klik Next</label>
+  <p class="muted" style="margin:2px 0 0">Untuk form yang berganti langkah tanpa reload halaman. Kalau halaman reload ke
+    alamat baru, klik extension sekali lagi.</p>
+  <button id="go">Isi draf di halaman ini</button>
+  <div id="status" class="muted"></div>
+  <p class="muted">Shortcut: Alt+Shift+D (bisa diubah di chrome://extensions/shortcuts).</p>
+  <script src="popup.js"></script>
+</body>
+</html>

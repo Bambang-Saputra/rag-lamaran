@@ -396,6 +396,42 @@ def test_autofill_unknown_kind_falls_back_to_rag():
     assert res["x"]["status"] in {"ok", "needs_review", "not_found"} and "retrieved" in res["x"]
 
 
+def test_work_and_organization_experience_are_separated():
+    from rag.autofill import classify_question
+    org = classify_question("Pengalaman organisasi atau kepanitiaan")
+    work = classify_question("Pengalaman kerja / magang")
+    assert "organisasi" in org["doc_types"] and "bukan pengalaman kerja" in org["question"]
+    assert work["doc_types"][0] == "cv" and "bukan organisasi" in work["question"]
+    # Kata "magang" saja (bukan "pengalaman magang") tidak membatasi pencarian, supaya esai motivasi tetap terbaca.
+    assert "doc_types" not in classify_question("Kenapa kamu tertarik dengan program magang ini?")
+    # Kalau dua-duanya disebut, jangan dibatasi.
+    assert "doc_types" not in classify_question("Ceritakan pengalaman kerja dan organisasi kamu")
+    names = [f["name"] for f in load_form()["fields"]]
+    assert "pengalaman_kerja" in names and "pengalaman_organisasi" in names
+
+
+def test_long_questions_become_paragraph_answers():
+    from rag.autofill import clean_question, draft_answers
+    q = "Pengalaman organisasi atau kepanitiaan"
+    assert draft_answers([q], INDEX, PROFILE)[0]["kind"] == "factual"  # tebakan dari teks saja
+    assert draft_answers([q], INDEX, PROFILE, long_questions={q})[0]["kind"] == "open"  # kolomnya textarea
+    assert clean_question("3. Nama lengkap *") == "Nama lengkap"
+
+
+def test_api_demo_page_and_long_questions():
+    from fastapi.testclient import TestClient
+    import api
+
+    api._cache.clear()
+    client = TestClient(api.app)
+    page = client.get("/demo")
+    assert page.status_code == 200 and "PT Contoh Karya Digital" in page.text and "fiktif" in page.text
+    assert "Pengalaman kerja / magang" in page.text and "Pengalaman organisasi atau kepanitiaan" in page.text
+    res = client.post("/api/draft", json={"questions_text": "Pengalaman organisasi atau kepanitiaan *",
+                                          "long_questions": ["Pengalaman organisasi atau kepanitiaan *"]})
+    assert res.status_code == 200 and res.json()[0]["kind"] == "open"
+
+
 def test_api_draft_and_status():
     from fastapi.testclient import TestClient
     import api

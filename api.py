@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from rag.autofill import autofill, draft_answers, load_form, parse_questions
+from rag.autofill import autofill, clean_question, draft_answers, load_form, parse_questions
 from rag.config import ROOT, get_settings
 from rag.index import load_index, load_profile
 from rag.pipeline import answer
@@ -81,11 +81,18 @@ class DraftRequest(BaseModel):
     questions_text: str
     position: str = ""
     job_description: str = ""
+    long_questions: list[str] = []  # dikirim extension untuk kolom textarea
 
 
 @app.get("/")
 def page():
     return FileResponse(ROOT / "web" / "index.html")
+
+
+@app.get("/demo")
+def demo_page():
+    """Halaman lamaran fiktif 2 langkah untuk mencoba browser extension."""
+    return FileResponse(ROOT / "web" / "demo_lamaran.html")
 
 
 @app.get("/api/status")
@@ -104,8 +111,9 @@ def api_draft(req: DraftRequest):
     if not questions:
         raise HTTPException(400, "Belum ada pertanyaan. Tempel satu pertanyaan per baris.")
     index, profile = _state()
+    long_questions = {clean_question(q) for q in req.long_questions} - {""}
     return _run(draft_answers, questions, index, profile, position=req.position,
-                job_description=req.job_description)
+                job_description=req.job_description, long_questions=long_questions)
 
 
 @app.get("/api/form")
