@@ -1,7 +1,7 @@
 # RAG Lamaran: draf isian form lamaran magang dari dokumen pribadi
 
 > Status: pipeline sudah dijalankan dengan Ollama lokal dan dievaluasi pada 26 pertanyaan berlabel
-> (lihat bagian Evaluasi). Bagian bertanda TODO masih perlu diisi.
+> (lihat bagian Evaluasi). Yang masih TODO hanya catatan penggunaan AI.
 
 ## Masalah
 
@@ -27,7 +27,10 @@ dan menyertakan sumbernya, jadi saya tinggal melakukan QC.
 Tipe dokumen diambil dari nama subfolder: `cv`, `transkrip`, `sertifikat`, `project`, `organisasi`, `esai`.
 Semua nama, institusi, email, dan nomor di data dummy fiktif.
 
-TODO: isi jumlah dokumen, tipe file, dan ukuran koleksi asli yang dipakai saat evaluasi.
+Koleksi yang dipakai untuk evaluasi, contoh output, dan demo adalah data dummy: 10 file Markdown (sekitar
+25 KB) dalam 6 tipe (1 CV, 1 transkrip, 4 sertifikat, 2 laporan project, 1 organisasi, 1 esai), yang menjadi
+34 chunk. Pipeline juga menerima PDF dan TXT; jalur PDF dites dengan PDF assessment 13 halaman (nomor halaman
+di sitasi sesuai). Dokumen asli saya tidak dipakai di angka evaluasi mana pun dan tidak ada di repo.
 
 ## Arsitektur
 
@@ -54,7 +57,7 @@ CLI tanya-jawab dan form memakai fungsi inti yang sama, `rag.pipeline.answer()`.
 |---|---|
 | `rag/loaders.py` | Ekstraksi teks per halaman dari PDF/MD/TXT |
 | `rag/chunking.py` | Strategi chunking per tipe dokumen; chunk tidak menyeberang halaman |
-| `rag/profile.py` | Regex untuk nama, email, HP, LinkedIn, GitHub |
+| `rag/profile.py` | Nama (label "Nama:" atau baris nama di awal CV, judul seperti "Curriculum Vitae" dilewati), email, HP, LinkedIn, GitHub |
 | `rag/bm25.py`, `rag/embeddings.py`, `rag/index.py` | Index keyword + vektor |
 | `rag/retrieve.py` | Hybrid retrieval dengan Reciprocal Rank Fusion |
 | `rag/prompts.py`, `rag/llm.py` | Prompt, format konteks, panggilan LLM (output JSON) |
@@ -73,7 +76,19 @@ CLI tanya-jawab dan form memakai fungsi inti yang sama, `rag.pipeline.answer()`.
 | Keyword | BM25 implementasi sendiri | Nama skill/tools (SQL, FastAPI) adalah keyword exact |
 | PDF | PyMuPDF | Ekstraksi teks per halaman untuk sitasi |
 
-Semua bisa diganti lewat `.env`. TODO: catat versi persis (`ollama --version`, `ollama show <model>`).
+Semua bisa diganti lewat `.env`.
+
+Versi yang dipakai (dicek 21 Okt 2026 dengan `ollama --version`, `ollama list`, `ollama show`):
+
+| Komponen | Versi |
+|---|---|
+| Ollama | 0.40.6 (run evaluasi pertama `qwen3:4b-instruct` tanggal 18 Okt memakai 0.40.5) |
+| `qwen3:4b-instruct` | ID `0edcdef34593`, arsitektur qwen3, 4.0B parameter, kuantisasi Q4_K_M |
+| `qwen3-embedding:0.6b` | ID `ac6da0dfba84`, 595.78M parameter, vektor 1024 dimensi, kuantisasi Q8_0 |
+| `qwen3.5:4b`, `gemma4:e2b` (hanya untuk perbandingan) | ID `d8b0f5e9760c`, `b37049369adf` |
+
+Model card Qwen3-4B-Instruct-2507 menyebut model ini hanya punya mode non-thinking, walaupun `ollama show`
+tetap mencantumkan capability "thinking". Parameter `think` tidak dikirim untuk model ini.
 
 ### Kandidat LLM yang dipertimbangkan (riset Oktober 2026)
 
@@ -113,14 +128,17 @@ python cli.py retrieve "sertifikat machine learning"   # retrieval saja, tanpa L
 python cli.py ask "Berapa IPK saya?" --type transkrip --short --save
 python cli.py chat                                     # tanya-jawab berulang di terminal
 python cli.py autofill --position "Data Analyst Intern" --save
-python cli.py draft --questions pertanyaan.txt --position "Data Analyst Intern"
+python cli.py draft --questions forms/contoh_pertanyaan.txt --position "Data Analyst Intern"
 python cli.py warmup                                   # muat model ke memori sekarang
 python cli.py serve                                    # buka http://127.0.0.1:8000
 python -m tests.test_offline                           # tes tanpa Ollama
 python -m evaluation.run_eval                          # evaluasi (lihat bagian Evaluasi)
 ```
 
-`--save` menyimpan output lengkap (chunk ter-retrieve, skor, jawaban, sumber, setting model) ke `outputs/examples/`.
+`--save` menyimpan output lengkap (chunk ter-retrieve, skor, jawaban, sumber, setting model). Kalau
+`DATA_DIR=data/dummy`, file disimpan ke `outputs/examples/` dan ikut di-commit sebagai contoh untuk reviewer.
+Untuk folder data lain (mis. `data/private`), file disimpan ke `storage/examples/`, yang di-ignore git,
+supaya isi dokumen pribadi tidak ikut ter-commit.
 
 Halaman web punya tiga tab:
 - Form simulasi: isi otomatis form contoh di `forms/magang_form.json`. Tombol "Kirim (simulasi)" hanya
@@ -180,9 +198,39 @@ Temuan dari tes mode tempel pertanyaan dengan model asli:
 
 ## Contoh output
 
-TODO: jalankan beberapa pertanyaan dengan `--save`, lalu rangkum di sini: pertanyaan, chunk yang ter-retrieve,
-jawaban, dan sumber. Sertakan contoh yang berhasil, yang gagal, dan satu pertanyaan tanpa bukti
-(misalnya "project computer vision", yang memang tidak ada di data dummy).
+Delapan contoh dijalankan pada 21 Okt 2026 dengan data dummy, `qwen3:4b-instruct`, retrieval hybrid, k=5, dan
+cek relevansi aktif. Output lengkapnya (semua chunk ter-retrieve beserta teks dan skornya, jawaban, sumber,
+flags, waktu, dan setting model) ada di [`outputs/examples/`](outputs/examples/).
+
+Satu pertanyaan ditelusuri dari awal sampai akhir (E1, `python cli.py ask "Berapa IPK kumulatif saya?" --short --save`):
+
+1. Retrieval (2,3 detik) mengembalikan 5 chunk: `transkrip#c0` (header transkrip, ada "IPK Kumulatif: 3,62"),
+   `cv#c2` (section Pendidikan, ada "IPK 3,62 / 4,00"), lalu `transkrip#c5`, `cv#c3`, `cv#c5`.
+2. Generation (8,5 detik): LLM menjawab "3,62" dan menyebut `transkrip#c0` dan `cv#c2` sebagai sumber.
+3. Validasi: kedua sumber ada di hasil retrieve, jawaban muncul utuh di teks sumber (support 1.0), dan cek
+   relevansi (5,3 detik) menilai jawaban relevan. Status akhirnya `ok`.
+
+| ID | Perintah dan pertanyaan | Chunk relevan yang ter-retrieve | Jawaban | Status | Catatan |
+|---|---|---|---|---|---|
+| E1 | `ask --short` "Berapa IPK kumulatif saya?" | `transkrip#c0` (rank 1), `cv#c2` (rank 2) | 3,62 | ok | Berhasil |
+| E2 | `ask --short` "Sertifikat apa saja yang saya dapat dari Akademi Data Nusantara?" | kedua sertifikat (rank 1 dan 4) | Python untuk Analisis Data, Dasar Machine Learning | ok | Berhasil, jawaban dari dua dokumen |
+| E3 | `ask` "Ceritakan project saya yang paling relevan untuk posisi Data Analyst Intern." | hanya 1 chunk project (`prediksi_harga_rumah#c4`, rank 3); rank 1 malah esai | Paragraf tentang project prediksi harga rumah | needs_review | Isi project benar, tetapi ada kalimat tambahan yang tidak ada di sumber (support 0.32), jadi ditandai |
+| E4 | `ask` "Project atau pekerjaan apa saja yang pernah saya kerjakan dengan FastAPI?" | chunk sistem inventaris dan sertifikat FastAPI; section Pengalaman di CV (freelance UMKM) tidak masuk top-5 | Hanya sistem inventaris lab | ok | Gagal di retrieval: jawaban tidak lengkap tetapi tidak ditandai |
+| E5 | `ask` "Project computer vision apa yang pernah saya buat?" | project lain (tidak relevan) | tidak ditemukan | not_found | Berhasil abstain |
+| E6 | `ask --short` "Berapa skor IELTS saya?" | `cv#c7` (section Bahasa, isinya TOEFL) di rank 1 | tidak ditemukan | not_found | Berhasil, tidak tertipu skor TOEFL |
+| E7 | `draft` dengan [`forms/contoh_pertanyaan.txt`](forms/contoh_pertanyaan.txt) (6 pertanyaan) | lihat file | Nama, email, IPK benar; "Jurusan" dijawab nama universitas | campuran | "Jurusan" tertangkap cek relevansi; "Ceritakan pengalaman organisasi" ditandai karena dokumen organisasi tidak masuk top-3 tanpa filter tipe dan jawabannya menambah kalimat; pertanyaan kesediaan ditandai "isi sendiri" |
+| E8 | `autofill` form simulasi (13 isian) | lihat file | 11 ok, 2 needs_review | campuran | Isian organisasi lengkap karena form membatasi pencarian ke dokumen organisasi + CV. Isian project ditandai karena menulis "akurasi cukup tinggi", yang tidak ada di dokumen. Jurusan diisi beserta universitas dan IPK tetapi tidak ditandai |
+
+Waktu: 9-26 detik per pertanyaan `ask` (not_found lebih cepat karena tidak ada cek relevansi), 55 detik untuk
+E7, dan 158 detik untuk E8.
+
+Yang terlihat dari contoh ini:
+- Pertanyaan faktual dan pertanyaan tanpa bukti ditangani dengan baik (E1, E2, E5, E6).
+- Masalah retrieval tetap tidak terdeteksi oleh validasi kalau jawabannya benar tetapi tidak lengkap (E4).
+- Validasi menangkap kalimat tambahan yang tidak ada di sumber pada jawaban paragraf (E3, E7, E8), tetapi tidak
+  menangkap jawaban singkat yang menambahkan informasi lain (jurusan di E8).
+- Filter tipe dokumen di config form membantu retrieval: isian organisasi di E8 lebih baik daripada pertanyaan
+  yang sama di E7, yang mencari ke semua dokumen.
 
 ## Keputusan desain
 
@@ -204,6 +252,8 @@ jawaban, dan sumber. Sertakan contoh yang berhasil, yang gagal, dan satu pertany
 - Ambang grounding (0.8 / 0.6) belum dievaluasi.
 - Tes offline memakai stub. Tes itu hanya membuktikan alurnya berjalan, bukan kualitas retrieval atau jawaban.
 - Jenis pertanyaan di mode tempel ditebak dengan pola kata (regex), jadi bisa salah untuk kalimat yang tidak biasa.
+- Nama diambil dari 10 baris pertama CV dengan heuristik (2-5 kata huruf, tanpa angka atau email). Kalau tidak
+  ada yang cocok, isian nama dikosongkan, bukan ditebak.
 - Chat belum punya ingatan percakapan; pertanyaan lanjutan seperti "yang kedua tadi apa?" tidak bisa dijawab.
 
 ## Evaluasi
@@ -353,7 +403,7 @@ Sudah dijalankan (hasilnya di bagian Evaluasi):
 3. Cek relevansi jawaban terhadap pertanyaan (cek kata kunci ditolak, pemeriksa LLM dipakai).
 4. Cek relevansi inline vs dua tahap (dua tahap membuat jawaban identik dengan run tanpa cek).
 
-TODO:
+Belum dijalankan:
 5. Autofill full-context (semua dokumen masuk prompt) vs retrieval per field.
 6. Tingkat edit setelah QC dari `storage/qc_log.jsonl`.
 7. Instruksi query embedding: dengan vs tanpa `EMBED_QUERY_INSTRUCTION` (recall@k).
@@ -364,7 +414,25 @@ TODO:
 
 ## Rencana selanjutnya
 
-TODO.
+Urutan berdasarkan dampak untuk pemakaian nyata:
+
+1. Uji dengan dokumen asli (PDF CV dua kolom, transkrip berbentuk tabel, sertifikat hasil scan) dan buat set
+   pertanyaan berlabel kedua dari dokumen itu. Semua angka di atas berasal dari data dummy yang rapi, jadi ini
+   cara paling langsung untuk tahu seberapa jauh hasilnya turun.
+2. Perbaiki prompt jawaban singkat supaya tidak menambahkan informasi lain (contoh jurusan yang diisi beserta
+   universitas dan IPK), lalu jalankan ulang evaluasi. Perubahan prompt harus diikuti evaluasi ulang karena
+   angka di README terikat pada prompt yang sekarang.
+3. Bank jawaban dari `storage/qc_log.jsonl`: jawaban yang sudah di-QC dipakai ulang untuk pertanyaan yang mirip di
+   form lain. Ini bisa memotong waktu jawaban dari belasan detik menjadi hampir instan untuk pertanyaan yang
+   berulang, dan hasilnya sudah dicek manusia.
+4. Browser extension setengah otomatis: extension membaca label kolom di halaman lamaran, memanggil `/api/draft`,
+   dan mengisi draf per halaman. Pengguna tetap menekan "Next" dan "Submit" sendiri, karena di banyak form
+   menekan "Next" sudah mengirim isian ke server perusahaan. Server lokal harus dibatasi supaya hanya menerima
+   permintaan dari extension itu.
+5. Jalankan model embedding di CPU supaya LLM mendapat seluruh VRAM (`ollama ps`: 34% LLM ada di CPU), lalu
+   ukur pengaruhnya ke waktu jawaban dan kualitas retrieval.
+6. Ingatan percakapan di mode chat untuk pertanyaan lanjutan.
+7. Eksperimen klasifikasi pertanyaan di mode tempel: aturan (sekarang) vs LLM, diukur dari ketepatan dan waktu.
 
 ## Penggunaan AI
 

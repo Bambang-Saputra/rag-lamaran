@@ -1,0 +1,151 @@
+{
+  "saved_at": "2026-10-21T23:34:52",
+  "settings": {
+    "data_dir": "data/dummy",
+    "storage_dir": "storage",
+    "llm_provider": "ollama",
+    "llm_model": "qwen3:4b-instruct",
+    "llm_base_url": "http://localhost:11434",
+    "temperature": "0.0",
+    "llm_think": "",
+    "relevance_check": "True",
+    "relevance_model": "",
+    "embed_model": "qwen3-embedding:0.6b",
+    "embed_base_url": "http://localhost:11434",
+    "embed_query_instruction": "Given a question about a job applicant, retrieve passages from the applicant's documents that answer it",
+    "retrieval_mode": "hybrid",
+    "top_k": "5",
+    "max_chunk_chars": "1200",
+    "max_context_chars": "6000",
+    "request_timeout": "120",
+    "keep_alive": "30m"
+  },
+  "question": "Ceritakan project saya yang paling relevan untuk posisi Data Analyst Intern.",
+  "doc_types": null,
+  "style": "long",
+  "retrieved": [
+    {
+      "rank": 1,
+      "chunk_id": "esai/motivasi_magang_data#c0",
+      "doc_id": "esai/motivasi_magang_data",
+      "file": "esai/motivasi_magang_data.md",
+      "doc_type": "esai",
+      "title": "Esai motivasi yang pernah saya kirim untuk lamaran magang Data Analyst.",
+      "page": 1,
+      "section": "Paragraf",
+      "text": "Esai motivasi yang pernah saya kirim untuk lamaran magang Data Analyst.\n\nSaya tertarik pada bidang data karena pengalaman menjadi asisten laboratorium basis data. Di sana saya melihat bahwa banyak keputusan sederhana, seperti jadwal praktikum, bisa jauh lebih baik jika didasarkan pada data kehadiran dan nilai mahasiswa.\n\nSaya ingin magang di posisi yang berhubungan dengan data karena ingin belajar bagaimana analisis dipakai untuk keputusan bisnis yang nyata, bukan hanya tugas kuliah. Saya juga ingin terbiasa bekerja dengan data yang berantakan dan berukuran besar.\n\nDalam lima tahun ke depan saya ingin bekerja sebagai data scientist yang bisa menjembatani tim teknis dan tim bisnis.",
+      "scores": {
+        "rrf": 0.03252,
+        "bm25": 4.1322,
+        "vector": 0.5865
+      },
+      "method_ranks": {
+        "bm25": 1,
+        "vector": 2
+      }
+    },
+    {
+      "rank": 2,
+      "chunk_id": "sertifikat/sert_python_analisis_data#c0",
+      "doc_id": "sertifikat/sert_python_analisis_data",
+      "file": "sertifikat/sert_python_analisis_data.md",
+      "doc_type": "sertifikat",
+      "title": "Sertifikat Kelulusan: Python untuk Analisis Data",
+      "page": 1,
+      "section": "Dokumen lengkap",
+      "text": "Sertifikat Kelulusan: Python untuk Analisis Data\n\nDiberikan kepada Raka Pratama oleh Akademi Data Nusantara, Maret 2024. Durasi 40 jam.\n\nMateri: dasar Python, manipulasi data dengan Pandas dan NumPy, data cleaning, exploratory data analysis (EDA), visualisasi dengan Matplotlib dan Seaborn, studi kasus analisis penjualan retail.\nProyek akhir: dashboard analisis penjualan bulanan dari dataset transaksi 50.000 baris.",
+      "scores": {
+        "rrf": 0.03132,
+        "bm25": 1.5829,
+        "vector": 0.6132
+      },
+      "method_ranks": {
+        "bm25": 7,
+        "vector": 1
+      }
+    },
+    {
+      "rank": 3,
+      "chunk_id": "project/prediksi_harga_rumah#c4",
+      "doc_id": "project/prediksi_harga_rumah",
+      "file": "project/prediksi_harga_rumah.md",
+      "doc_type": "project",
+      "title": "Prediksi Harga Rumah Jabodetabek",
+      "page": 1,
+      "section": "Peran saya",
+      "text": "Mengerjakan data cleaning, feature engineering, dan evaluasi model. Project dikerjakan berdua.",
+      "scores": {
+        "rrf": 0.03126,
+        "bm25": 3.9258,
+        "vector": 0.4594
+      },
+      "method_ranks": {
+        "bm25": 3,
+        "vector": 5
+      }
+    },
+    {
+      "rank": 4,
+      "chunk_id": "cv/cv_raka_pratama#c2",
+      "doc_id": "cv/cv_raka_pratama",
+      "file": "cv/cv_raka_pratama.md",
+      "doc_type": "cv",
+      "title": "Raka Pratama",
+      "page": 1,
+      "section": "Pendidikan",
+      "text": "S1 Teknik Informatika, Universitas Nusantara Digital (2022 - sekarang)\nIPK 3,62 / 4,00\nMata kuliah relevan: Basis Data, Statistika, Kecerdasan Buatan, Pemrograman Web",
+      "scores": {
+        "rrf": 0.03105,
+        "bm25": 3.9679,
+        "vector": 0.3816
+      },
+      "method_ranks": {
+        "bm25": 2,
+        "vector": 7
+      }
+    },
+    {
+      "rank": 5,
+      "chunk_id": "cv/cv_raka_pratama#c1",
+      "doc_id": "cv/cv_raka_pratama",
+      "file": "cv/cv_raka_pratama.md",
+      "doc_type": "cv",
+      "title": "Raka Pratama",
+      "page": 1,
+      "section": "Ringkasan",
+      "text": "Mahasiswa Teknik Informatika semester 7 yang tertarik pada analisis data dan machine learning.\nTerbiasa membersihkan data, membuat model prediksi sederhana, dan membangun API backend.",
+      "scores": {
+        "rrf": 0.03012,
+        "bm25": 1.3826,
+        "vector": 0.4931
+      },
+      "method_ranks": {
+        "bm25": 9,
+        "vector": 4
+      }
+    }
+  ],
+  "answer": "Saya mengambil peran dalam proyek prediksi harga rumah, di mana saya mengerjakan data cleaning, feature engineering, dan evaluasi model bersama rekan kerja. Proyek ini membantu saya terbiasa mengelola data besar dan membangun model prediksi, keterampilan yang sangat relevan untuk posisi Data Analyst Intern.",
+  "status": "needs_review",
+  "sources": [
+    {
+      "chunk_id": "project/prediksi_harga_rumah#c4",
+      "file": "project/prediksi_harga_rumah.md",
+      "page": 1,
+      "section": "Peran saya"
+    }
+  ],
+  "support": 0.323,
+  "relevance": {
+    "relevant": true,
+    "reason": "Jawaban membahas secara spesifik proyek prediksi harga rumah, mencakup data cleaning, feature engineering, dan evaluasi model, yang secara langsung terkait dengan keterampilan yang dibutuhkan untuk posisi Data Analyst Intern. Hal ini menjawab pertanyaan dengan fokus pada proyek yang relevan."
+  },
+  "flags": [
+    "dukungan_sumber_rendah"
+  ],
+  "timing_ms": {
+    "retrieval": 2273,
+    "generation": 14689,
+    "relevance": 7502
+  }
+}

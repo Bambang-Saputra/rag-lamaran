@@ -1,0 +1,138 @@
+{
+  "saved_at": "2026-10-21T23:35:22",
+  "settings": {
+    "data_dir": "data/dummy",
+    "storage_dir": "storage",
+    "llm_provider": "ollama",
+    "llm_model": "qwen3:4b-instruct",
+    "llm_base_url": "http://localhost:11434",
+    "temperature": "0.0",
+    "llm_think": "",
+    "relevance_check": "True",
+    "relevance_model": "",
+    "embed_model": "qwen3-embedding:0.6b",
+    "embed_base_url": "http://localhost:11434",
+    "embed_query_instruction": "Given a question about a job applicant, retrieve passages from the applicant's documents that answer it",
+    "retrieval_mode": "hybrid",
+    "top_k": "5",
+    "max_chunk_chars": "1200",
+    "max_context_chars": "6000",
+    "request_timeout": "120",
+    "keep_alive": "30m"
+  },
+  "question": "Project computer vision apa yang pernah saya buat?",
+  "doc_types": null,
+  "style": "long",
+  "retrieved": [
+    {
+      "rank": 1,
+      "chunk_id": "project/prediksi_harga_rumah#c4",
+      "doc_id": "project/prediksi_harga_rumah",
+      "file": "project/prediksi_harga_rumah.md",
+      "doc_type": "project",
+      "title": "Prediksi Harga Rumah Jabodetabek",
+      "page": 1,
+      "section": "Peran saya",
+      "text": "Mengerjakan data cleaning, feature engineering, dan evaluasi model. Project dikerjakan berdua.",
+      "scores": {
+        "rrf": 0.03178,
+        "bm25": 2.7769,
+        "vector": 0.4286
+      },
+      "method_ranks": {
+        "bm25": 1,
+        "vector": 5
+      }
+    },
+    {
+      "rank": 2,
+      "chunk_id": "project/prediksi_harga_rumah#c0",
+      "doc_id": "project/prediksi_harga_rumah",
+      "file": "project/prediksi_harga_rumah.md",
+      "doc_type": "project",
+      "title": "Prediksi Harga Rumah Jabodetabek",
+      "page": 1,
+      "section": "Latar belakang",
+      "text": "Project tugas akhir mata kuliah Machine Learning (semester 6). Tujuannya memperkirakan harga rumah berdasarkan luas tanah, luas bangunan, jumlah kamar, dan lokasi.",
+      "scores": {
+        "rrf": 0.03102,
+        "bm25": 2.1876,
+        "vector": 0.4214
+      },
+      "method_ranks": {
+        "bm25": 3,
+        "vector": 6
+      }
+    },
+    {
+      "rank": 3,
+      "chunk_id": "cv/cv_raka_pratama#c4",
+      "doc_id": "cv/cv_raka_pratama",
+      "file": "cv/cv_raka_pratama.md",
+      "doc_type": "cv",
+      "title": "Raka Pratama",
+      "page": 1,
+      "section": "Project",
+      "text": "- Prediksi Harga Rumah Jabodetabek: model regresi dengan scikit-learn\n- Sistem Inventaris Lab: aplikasi web peminjaman alat dengan FastAPI dan PostgreSQL",
+      "scores": {
+        "rrf": 0.03083,
+        "bm25": 2.4967,
+        "vector": 0.41
+      },
+      "method_ranks": {
+        "bm25": 2,
+        "vector": 8
+      }
+    },
+    {
+      "rank": 4,
+      "chunk_id": "cv/cv_raka_pratama#c1",
+      "doc_id": "cv/cv_raka_pratama",
+      "file": "cv/cv_raka_pratama.md",
+      "doc_type": "cv",
+      "title": "Raka Pratama",
+      "page": 1,
+      "section": "Ringkasan",
+      "text": "Mahasiswa Teknik Informatika semester 7 yang tertarik pada analisis data dan machine learning.\nTerbiasa membersihkan data, membuat model prediksi sederhana, dan membangun API backend.",
+      "scores": {
+        "rrf": 0.01639,
+        "bm25": 0.0,
+        "vector": 0.4792
+      },
+      "method_ranks": {
+        "bm25": null,
+        "vector": 1
+      }
+    },
+    {
+      "rank": 5,
+      "chunk_id": "project/sistem_inventaris_lab#c2",
+      "doc_id": "project/sistem_inventaris_lab",
+      "file": "project/sistem_inventaris_lab.md",
+      "doc_type": "project",
+      "title": "Sistem Inventaris Lab",
+      "page": 1,
+      "section": "Peran saya",
+      "text": "Membangun backend REST API dengan FastAPI, mendesain skema database PostgreSQL, dan membuat fitur notifikasi keterlambatan lewat email.",
+      "scores": {
+        "rrf": 0.01613,
+        "bm25": 0.0,
+        "vector": 0.4432
+      },
+      "method_ranks": {
+        "bm25": null,
+        "vector": 2
+      }
+    }
+  ],
+  "answer": "",
+  "status": "not_found",
+  "sources": [],
+  "support": 0.0,
+  "relevance": null,
+  "flags": [],
+  "timing_ms": {
+    "retrieval": 2287,
+    "generation": 6490
+  }
+}

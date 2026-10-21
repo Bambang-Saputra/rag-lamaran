@@ -1,0 +1,312 @@
+{
+  "saved_at": "2026-10-21T23:36:27",
+  "settings": {
+    "data_dir": "data/dummy",
+    "storage_dir": "storage",
+    "llm_provider": "ollama",
+    "llm_model": "qwen3:4b-instruct",
+    "llm_base_url": "http://localhost:11434",
+    "temperature": "0.0",
+    "llm_think": "",
+    "relevance_check": "True",
+    "relevance_model": "",
+    "embed_model": "qwen3-embedding:0.6b",
+    "embed_base_url": "http://localhost:11434",
+    "embed_query_instruction": "Given a question about a job applicant, retrieve passages from the applicant's documents that answer it",
+    "retrieval_mode": "hybrid",
+    "top_k": "5",
+    "max_chunk_chars": "1200",
+    "max_context_chars": "6000",
+    "request_timeout": "120",
+    "keep_alive": "30m"
+  },
+  "position": "Data Analyst Intern",
+  "job_description": "",
+  "results": [
+    {
+      "id": "q1",
+      "question": "Nama lengkap",
+      "kind": "fixed",
+      "value": "Raka Pratama",
+      "status": "ok",
+      "sources": [
+        {
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "method": "baris pertama CV"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "q2",
+      "question": "Email",
+      "kind": "fixed",
+      "value": "raka.pratama@example.com",
+      "status": "ok",
+      "sources": [
+        {
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "method": "regex"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "q3",
+      "question": "IPK terakhir",
+      "kind": "factual",
+      "value": "3,62",
+      "status": "ok",
+      "sources": [
+        {
+          "chunk_id": "transkrip/transkrip_raka_pratama#c0",
+          "file": "transkrip/transkrip_raka_pratama.md",
+          "page": 1,
+          "section": "Transkrip Nilai Sementara"
+        },
+        {
+          "chunk_id": "cv/cv_raka_pratama#c2",
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "section": "Pendidikan"
+        }
+      ],
+      "flags": [],
+      "support": 1.0,
+      "relevance": {
+        "relevant": true,
+        "reason": "Jawaban membahas nilai IPK secara spesifik yang ditanyakan dalam pertanyaan."
+      },
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "transkrip/transkrip_raka_pratama#c0",
+          "section": "Transkrip Nilai Sementara",
+          "scores": {
+            "rrf": 0.03279,
+            "bm25": 2.5992,
+            "vector": 0.4942
+          }
+        },
+        {
+          "rank": 2,
+          "chunk_id": "cv/cv_raka_pratama#c2",
+          "section": "Pendidikan",
+          "scores": {
+            "rrf": 0.03226,
+            "bm25": 2.5524,
+            "vector": 0.4722
+          }
+        },
+        {
+          "rank": 3,
+          "chunk_id": "cv/cv_raka_pratama#c3",
+          "section": "Pengalaman",
+          "scores": {
+            "rrf": 0.01587,
+            "bm25": 0.0,
+            "vector": 0.45
+          }
+        },
+        {
+          "rank": 4,
+          "chunk_id": "cv/cv_raka_pratama#c1",
+          "section": "Ringkasan",
+          "scores": {
+            "rrf": 0.01562,
+            "bm25": 0.0,
+            "vector": 0.4304
+          }
+        },
+        {
+          "rank": 5,
+          "chunk_id": "sertifikat/sert_python_analisis_data#c0",
+          "section": "Dokumen lengkap",
+          "scores": {
+            "rrf": 0.01538,
+            "bm25": 0.0,
+            "vector": 0.4301
+          }
+        }
+      ],
+      "timing_ms": {
+        "retrieval": 2253,
+        "generation": 9432,
+        "relevance": 4415
+      }
+    },
+    {
+      "id": "q4",
+      "question": "Jurusan",
+      "kind": "factual",
+      "value": "Universitas Nusantara Digital",
+      "status": "needs_review",
+      "sources": [
+        {
+          "chunk_id": "cv/cv_raka_pratama#c2",
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "section": "Pendidikan"
+        }
+      ],
+      "flags": [
+        "jawaban_tidak_relevan"
+      ],
+      "support": 1.0,
+      "relevance": {
+        "relevant": false,
+        "reason": "Jawaban tidak membahas hal spesifik yang ditanyakan. Pertanyaan adalah tentang 'jurusan', tetapi jawaban menyebut 'Universitas Nusantara Digital', yang merupakan nama universitas, bukan jurusan. Jadi, jawaban tidak relevan dengan pertanyaan."
+      },
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "project/sistem_inventaris_lab#c3",
+          "section": "Hasil",
+          "scores": {
+            "rrf": 0.02889,
+            "bm25": 3.1023,
+            "vector": 0.3672
+          }
+        },
+        {
+          "rank": 2,
+          "chunk_id": "cv/cv_raka_pratama#c2",
+          "section": "Pendidikan",
+          "scores": {
+            "rrf": 0.01639,
+            "bm25": 0.0,
+            "vector": 0.501
+          }
+        },
+        {
+          "rank": 3,
+          "chunk_id": "cv/cv_raka_pratama#c3",
+          "section": "Pengalaman",
+          "scores": {
+            "rrf": 0.01613,
+            "bm25": 0.0,
+            "vector": 0.4841
+          }
+        },
+        {
+          "rank": 4,
+          "chunk_id": "cv/cv_raka_pratama#c1",
+          "section": "Ringkasan",
+          "scores": {
+            "rrf": 0.01587,
+            "bm25": 0.0,
+            "vector": 0.4679
+          }
+        },
+        {
+          "rank": 5,
+          "chunk_id": "transkrip/transkrip_raka_pratama#c5",
+          "section": "Semester 5",
+          "scores": {
+            "rrf": 0.01562,
+            "bm25": 0.0,
+            "vector": 0.4665
+          }
+        }
+      ],
+      "timing_ms": {
+        "retrieval": 2201,
+        "generation": 8187,
+        "relevance": 6321
+      }
+    },
+    {
+      "id": "q5",
+      "question": "Ceritakan pengalaman organisasi Anda",
+      "kind": "open",
+      "value": "Saya menjabat sebagai Kepala Divisi IT di Himpunan Mahasiswa Informatika dari 2023 hingga 2024. Dalam peran tersebut, saya memimpin tim untuk mengelola sistem informasi internal dan memperbaiki alur komunikasi antar anggota. Saya juga mengorganisasi kegiatan teknis yang membutuhkan pengembangan aplikasi sederhana. Pengalaman ini membantu saya terbiasa bekerja dalam tim dan mengelola proyek dengan deadline ketat.",
+      "status": "needs_review",
+      "sources": [
+        {
+          "chunk_id": "cv/cv_raka_pratama#c6",
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "section": "Organisasi"
+        }
+      ],
+      "flags": [
+        "dukungan_sumber_rendah"
+      ],
+      "support": 0.2,
+      "relevance": {
+        "relevant": true,
+        "reason": "Jawaban membahas secara spesifik pengalaman organisasi dengan menjelaskan peran, tanggung jawab, dan hasil dalam konteks organisasi mahasiswa, sesuai pertanyaan."
+      },
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "esai/motivasi_magang_data#c0",
+          "section": "Paragraf",
+          "scores": {
+            "rrf": 0.03279,
+            "bm25": 5.4148,
+            "vector": 0.569
+          }
+        },
+        {
+          "rank": 2,
+          "chunk_id": "sertifikat/sert_python_analisis_data#c0",
+          "section": "Dokumen lengkap",
+          "scores": {
+            "rrf": 0.03175,
+            "bm25": 1.5829,
+            "vector": 0.5375
+          }
+        },
+        {
+          "rank": 3,
+          "chunk_id": "cv/cv_raka_pratama#c3",
+          "section": "Pengalaman",
+          "scores": {
+            "rrf": 0.03175,
+            "bm25": 2.6236,
+            "vector": 0.516
+          }
+        },
+        {
+          "rank": 4,
+          "chunk_id": "cv/cv_raka_pratama#c1",
+          "section": "Ringkasan",
+          "scores": {
+            "rrf": 0.03078,
+            "bm25": 1.3826,
+            "vector": 0.4547
+          }
+        },
+        {
+          "rank": 5,
+          "chunk_id": "cv/cv_raka_pratama#c6",
+          "section": "Organisasi",
+          "scores": {
+            "rrf": 0.02929,
+            "bm25": 4.1734,
+            "vector": 0.3192
+          }
+        }
+      ],
+      "timing_ms": {
+        "retrieval": 2245,
+        "generation": 13183,
+        "relevance": 6163
+      }
+    },
+    {
+      "id": "q6",
+      "question": "Apakah kamu bersedia magang onsite di Jakarta selama 6 bulan?",
+      "kind": "manual",
+      "value": "",
+      "status": "not_found",
+      "sources": [],
+      "flags": [
+        "isi_sendiri"
+      ]
+    }
+  ]
+}

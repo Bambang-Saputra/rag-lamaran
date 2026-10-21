@@ -1,0 +1,161 @@
+{
+  "saved_at": "2026-10-21T23:35:12",
+  "settings": {
+    "data_dir": "data/dummy",
+    "storage_dir": "storage",
+    "llm_provider": "ollama",
+    "llm_model": "qwen3:4b-instruct",
+    "llm_base_url": "http://localhost:11434",
+    "temperature": "0.0",
+    "llm_think": "",
+    "relevance_check": "True",
+    "relevance_model": "",
+    "embed_model": "qwen3-embedding:0.6b",
+    "embed_base_url": "http://localhost:11434",
+    "embed_query_instruction": "Given a question about a job applicant, retrieve passages from the applicant's documents that answer it",
+    "retrieval_mode": "hybrid",
+    "top_k": "5",
+    "max_chunk_chars": "1200",
+    "max_context_chars": "6000",
+    "request_timeout": "120",
+    "keep_alive": "30m"
+  },
+  "question": "Project atau pekerjaan apa saja yang pernah saya kerjakan dengan FastAPI?",
+  "doc_types": null,
+  "style": "long",
+  "retrieved": [
+    {
+      "rank": 1,
+      "chunk_id": "project/sistem_inventaris_lab#c4",
+      "doc_id": "project/sistem_inventaris_lab",
+      "file": "project/sistem_inventaris_lab.md",
+      "doc_type": "project",
+      "title": "Sistem Inventaris Lab",
+      "page": 1,
+      "section": "Teknologi",
+      "text": "Python, FastAPI, PostgreSQL, SQLAlchemy, Docker",
+      "scores": {
+        "rrf": 0.03175,
+        "bm25": 2.3463,
+        "vector": 0.6346
+      },
+      "method_ranks": {
+        "bm25": 3,
+        "vector": 3
+      }
+    },
+    {
+      "rank": 2,
+      "chunk_id": "cv/cv_raka_pratama#c4",
+      "doc_id": "cv/cv_raka_pratama",
+      "file": "cv/cv_raka_pratama.md",
+      "doc_type": "cv",
+      "title": "Raka Pratama",
+      "page": 1,
+      "section": "Project",
+      "text": "- Prediksi Harga Rumah Jabodetabek: model regresi dengan scikit-learn\n- Sistem Inventaris Lab: aplikasi web peminjaman alat dengan FastAPI dan PostgreSQL",
+      "scores": {
+        "rrf": 0.03154,
+        "bm25": 4.3221,
+        "vector": 0.5317
+      },
+      "method_ranks": {
+        "bm25": 1,
+        "vector": 6
+      }
+    },
+    {
+      "rank": 3,
+      "chunk_id": "sertifikat/sert_backend_fastapi#c0",
+      "doc_id": "sertifikat/sert_backend_fastapi",
+      "file": "sertifikat/sert_backend_fastapi.md",
+      "doc_type": "sertifikat",
+      "title": "Sertifikat Pelatihan: Membangun REST API dengan FastAPI",
+      "page": 1,
+      "section": "Dokumen lengkap",
+      "text": "Sertifikat Pelatihan: Membangun REST API dengan FastAPI\n\nDiberikan kepada Raka Pratama oleh Kelas Koding Indonesia, Januari 2024. Durasi 24 jam.\n\nMateri: routing, validasi data dengan Pydantic, autentikasi JWT, koneksi PostgreSQL dengan SQLAlchemy, testing endpoint, dan deployment dengan Docker.",
+      "scores": {
+        "rrf": 0.03154,
+        "bm25": 1.9655,
+        "vector": 0.7019
+      },
+      "method_ranks": {
+        "bm25": 6,
+        "vector": 1
+      }
+    },
+    {
+      "rank": 4,
+      "chunk_id": "project/sistem_inventaris_lab#c2",
+      "doc_id": "project/sistem_inventaris_lab",
+      "file": "project/sistem_inventaris_lab.md",
+      "doc_type": "project",
+      "title": "Sistem Inventaris Lab",
+      "page": 1,
+      "section": "Peran saya",
+      "text": "Membangun backend REST API dengan FastAPI, mendesain skema database PostgreSQL, dan membuat fitur notifikasi keterlambatan lewat email.",
+      "scores": {
+        "rrf": 0.03105,
+        "bm25": 1.8631,
+        "vector": 0.6653
+      },
+      "method_ranks": {
+        "bm25": 7,
+        "vector": 2
+      }
+    },
+    {
+      "rank": 5,
+      "chunk_id": "cv/cv_raka_pratama#c5",
+      "doc_id": "cv/cv_raka_pratama",
+      "file": "cv/cv_raka_pratama.md",
+      "doc_type": "cv",
+      "title": "Raka Pratama",
+      "page": 1,
+      "section": "Skills",
+      "text": "Python, SQL, Pandas, NumPy, scikit-learn, Matplotlib, FastAPI, PostgreSQL, Git, Docker (dasar)",
+      "scores": {
+        "rrf": 0.03101,
+        "bm25": 2.0303,
+        "vector": 0.6152
+      },
+      "method_ranks": {
+        "bm25": 5,
+        "vector": 4
+      }
+    }
+  ],
+  "answer": "Saya pernah membangun backend REST API dengan FastAPI untuk sistem inventaris lab, di mana saya juga mendesain skema database PostgreSQL dan membuat fitur notifikasi keterlambatan lewat email.",
+  "status": "ok",
+  "sources": [
+    {
+      "chunk_id": "project/sistem_inventaris_lab#c2",
+      "file": "project/sistem_inventaris_lab.md",
+      "page": 1,
+      "section": "Peran saya"
+    },
+    {
+      "chunk_id": "project/sistem_inventaris_lab#c4",
+      "file": "project/sistem_inventaris_lab.md",
+      "page": 1,
+      "section": "Teknologi"
+    },
+    {
+      "chunk_id": "sertifikat/sert_backend_fastapi#c0",
+      "file": "sertifikat/sert_backend_fastapi.md",
+      "page": 1,
+      "section": "Dokumen lengkap"
+    }
+  ],
+  "support": 0.789,
+  "relevance": {
+    "relevant": true,
+    "reason": "Jawaban membahas secara spesifik pekerjaan yang dilakukan dengan FastAPI, yaitu pembangunan backend REST API untuk sistem inventaris lab, yang langsung menjawab pertanyaan tentang project atau pekerjaan dengan FastAPI."
+  },
+  "flags": [],
+  "timing_ms": {
+    "retrieval": 2330,
+    "generation": 11750,
+    "relevance": 6104
+  }
+}

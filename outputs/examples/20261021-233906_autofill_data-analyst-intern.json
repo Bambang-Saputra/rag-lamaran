@@ -1,0 +1,683 @@
+{
+  "saved_at": "2026-10-21T23:39:06",
+  "settings": {
+    "data_dir": "data/dummy",
+    "storage_dir": "storage",
+    "llm_provider": "ollama",
+    "llm_model": "qwen3:4b-instruct",
+    "llm_base_url": "http://localhost:11434",
+    "temperature": "0.0",
+    "llm_think": "",
+    "relevance_check": "True",
+    "relevance_model": "",
+    "embed_model": "qwen3-embedding:0.6b",
+    "embed_base_url": "http://localhost:11434",
+    "embed_query_instruction": "Given a question about a job applicant, retrieve passages from the applicant's documents that answer it",
+    "retrieval_mode": "hybrid",
+    "top_k": "5",
+    "max_chunk_chars": "1200",
+    "max_context_chars": "6000",
+    "request_timeout": "120",
+    "keep_alive": "30m"
+  },
+  "position": "Data Analyst Intern",
+  "job_description": "",
+  "results": {
+    "nama": {
+      "value": "Raka Pratama",
+      "status": "ok",
+      "sources": [
+        {
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "method": "baris pertama CV"
+        }
+      ],
+      "flags": []
+    },
+    "email": {
+      "value": "raka.pratama@example.com",
+      "status": "ok",
+      "sources": [
+        {
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "method": "regex"
+        }
+      ],
+      "flags": []
+    },
+    "telepon": {
+      "value": "0812-0000-1234",
+      "status": "ok",
+      "sources": [
+        {
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "method": "regex"
+        }
+      ],
+      "flags": []
+    },
+    "linkedin": {
+      "value": "linkedin.com/in/raka-pratama-dummy",
+      "status": "ok",
+      "sources": [
+        {
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "method": "regex"
+        }
+      ],
+      "flags": []
+    },
+    "github": {
+      "value": "github.com/raka-pratama-dummy",
+      "status": "ok",
+      "sources": [
+        {
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "method": "regex"
+        }
+      ],
+      "flags": []
+    },
+    "universitas": {
+      "value": "Universitas Nusantara Digital, 3,62",
+      "status": "needs_review",
+      "sources": [
+        {
+          "chunk_id": "cv/cv_raka_pratama#c2",
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "section": "Pendidikan"
+        },
+        {
+          "chunk_id": "transkrip/transkrip_raka_pratama#c0",
+          "file": "transkrip/transkrip_raka_pratama.md",
+          "page": 1,
+          "section": "Transkrip Nilai Sementara"
+        }
+      ],
+      "flags": [
+        "jawaban_tidak_relevan"
+      ],
+      "support": 1.0,
+      "relevance": {
+        "relevant": false,
+        "reason": "Jawaban menyebutkan 'Universitas Nusantara Digital' yang merupakan nama universitas, namun angka '3,62' tidak jelas konteksnya dan tidak membahas secara spesifik tentang tempat kuliah. Tidak ada penjelasan bahwa '3,62' adalah lokasi atau detail lokasi universitas. Maka jawaban tidak membahas secara "
+      },
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "cv/cv_raka_pratama#c2",
+          "section": "Pendidikan",
+          "scores": {
+            "rrf": 0.03252,
+            "bm25": 1.9839,
+            "vector": 0.5313
+          }
+        },
+        {
+          "rank": 2,
+          "chunk_id": "transkrip/transkrip_raka_pratama#c0",
+          "section": "Transkrip Nilai Sementara",
+          "scores": {
+            "rrf": 0.03227,
+            "bm25": 2.0203,
+            "vector": 0.4963
+          }
+        },
+        {
+          "rank": 3,
+          "chunk_id": "cv/cv_raka_pratama#c3",
+          "section": "Pengalaman",
+          "scores": {
+            "rrf": 0.032,
+            "bm25": 1.4984,
+            "vector": 0.5138
+          }
+        },
+        {
+          "rank": 4,
+          "chunk_id": "cv/cv_raka_pratama#c1",
+          "section": "Ringkasan",
+          "scores": {
+            "rrf": 0.01562,
+            "bm25": 0.0,
+            "vector": 0.4786
+          }
+        },
+        {
+          "rank": 5,
+          "chunk_id": "transkrip/transkrip_raka_pratama#c2",
+          "section": "Semester 2",
+          "scores": {
+            "rrf": 0.01538,
+            "bm25": 0.0,
+            "vector": 0.4321
+          }
+        }
+      ],
+      "timing_ms": {
+        "retrieval": 2268,
+        "generation": 9448,
+        "relevance": 7598
+      }
+    },
+    "jurusan": {
+      "value": "S1 Teknik Informatika, Universitas Nusantara Digital, 3,62",
+      "status": "ok",
+      "sources": [
+        {
+          "chunk_id": "transkrip/transkrip_raka_pratama#c0",
+          "file": "transkrip/transkrip_raka_pratama.md",
+          "page": 1,
+          "section": "Transkrip Nilai Sementara"
+        },
+        {
+          "chunk_id": "cv/cv_raka_pratama#c2",
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "section": "Pendidikan"
+        }
+      ],
+      "flags": [],
+      "support": 1.0,
+      "relevance": {
+        "relevant": true,
+        "reason": "Jawaban membahas program studi (Teknik Informatika) dan institusi (Universitas Nusantara Digital), serta nilai (3,62), yang tidak secara spesifik menjawab pertanyaan 'apa program studi atau jurusan saya?' dengan fokus pada nama jurusan. Namun, karena jawaban secara langsung menyebutkan 'S1 Teknik In"
+      },
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "transkrip/transkrip_raka_pratama#c0",
+          "section": "Transkrip Nilai Sementara",
+          "scores": {
+            "rrf": 0.03227,
+            "bm25": 5.7015,
+            "vector": 0.4991
+          }
+        },
+        {
+          "rank": 2,
+          "chunk_id": "cv/cv_raka_pratama#c1",
+          "section": "Ringkasan",
+          "scores": {
+            "rrf": 0.01639,
+            "bm25": 0.0,
+            "vector": 0.5223
+          }
+        },
+        {
+          "rank": 3,
+          "chunk_id": "transkrip/transkrip_raka_pratama#c3",
+          "section": "Semester 3",
+          "scores": {
+            "rrf": 0.01613,
+            "bm25": 0.0,
+            "vector": 0.5176
+          }
+        },
+        {
+          "rank": 4,
+          "chunk_id": "cv/cv_raka_pratama#c2",
+          "section": "Pendidikan",
+          "scores": {
+            "rrf": 0.01562,
+            "bm25": 0.0,
+            "vector": 0.4955
+          }
+        },
+        {
+          "rank": 5,
+          "chunk_id": "transkrip/transkrip_raka_pratama#c5",
+          "section": "Semester 5",
+          "scores": {
+            "rrf": 0.01538,
+            "bm25": 0.0,
+            "vector": 0.4917
+          }
+        }
+      ],
+      "timing_ms": {
+        "retrieval": 2251,
+        "generation": 8138,
+        "relevance": 8654
+      }
+    },
+    "ipk": {
+      "value": "3,62",
+      "status": "ok",
+      "sources": [
+        {
+          "chunk_id": "transkrip/transkrip_raka_pratama#c0",
+          "file": "transkrip/transkrip_raka_pratama.md",
+          "page": 1,
+          "section": "Transkrip Nilai Sementara"
+        },
+        {
+          "chunk_id": "cv/cv_raka_pratama#c2",
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "section": "Pendidikan"
+        }
+      ],
+      "flags": [],
+      "support": 1.0,
+      "relevance": {
+        "relevant": true,
+        "reason": "Jawaban secara langsung menjawab pertanyaan tentang IPK kumulatif, tanpa menyebut hal lain. Maka jawaban tersebut relevan dengan pertanyaan."
+      },
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "transkrip/transkrip_raka_pratama#c0",
+          "section": "Transkrip Nilai Sementara",
+          "scores": {
+            "rrf": 0.03279,
+            "bm25": 5.7015,
+            "vector": 0.6075
+          }
+        },
+        {
+          "rank": 2,
+          "chunk_id": "cv/cv_raka_pratama#c2",
+          "section": "Pendidikan",
+          "scores": {
+            "rrf": 0.03226,
+            "bm25": 2.5524,
+            "vector": 0.5309
+          }
+        },
+        {
+          "rank": 3,
+          "chunk_id": "transkrip/transkrip_raka_pratama#c5",
+          "section": "Semester 5",
+          "scores": {
+            "rrf": 0.01587,
+            "bm25": 0.0,
+            "vector": 0.4994
+          }
+        },
+        {
+          "rank": 4,
+          "chunk_id": "cv/cv_raka_pratama#c3",
+          "section": "Pengalaman",
+          "scores": {
+            "rrf": 0.01562,
+            "bm25": 0.0,
+            "vector": 0.489
+          }
+        },
+        {
+          "rank": 5,
+          "chunk_id": "cv/cv_raka_pratama#c5",
+          "section": "Skills",
+          "scores": {
+            "rrf": 0.01538,
+            "bm25": 0.0,
+            "vector": 0.4849
+          }
+        }
+      ],
+      "timing_ms": {
+        "retrieval": 2216,
+        "generation": 7807,
+        "relevance": 5375
+      }
+    },
+    "skills": {
+      "value": "Python, SQL, Pandas, NumPy, scikit-learn, Matplotlib, FastAPI, PostgreSQL, Git, Docker",
+      "status": "ok",
+      "sources": [
+        {
+          "chunk_id": "cv/cv_raka_pratama#c5",
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "section": "Skills"
+        }
+      ],
+      "flags": [],
+      "support": 1.0,
+      "relevance": {
+        "relevant": true,
+        "reason": "Jawaban membahas secara spesifik bahasa pemrograman (Python), library (Pandas, NumPy, scikit-learn, Matplotlib), dan tools (FastAPI, PostgreSQL, Git, Docker) yang diminta dalam pertanyaan tentang technical skills."
+      },
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "cv/cv_raka_pratama#c5",
+          "section": "Skills",
+          "scores": {
+            "rrf": 0.03252,
+            "bm25": 3.7987,
+            "vector": 0.6366
+          }
+        },
+        {
+          "rank": 2,
+          "chunk_id": "cv/cv_raka_pratama#c7",
+          "section": "Bahasa",
+          "scores": {
+            "rrf": 0.03178,
+            "bm25": 4.279,
+            "vector": 0.4462
+          }
+        },
+        {
+          "rank": 3,
+          "chunk_id": "cv/cv_raka_pratama#c2",
+          "section": "Pendidikan",
+          "scores": {
+            "rrf": 0.0315,
+            "bm25": 1.9839,
+            "vector": 0.4904
+          }
+        },
+        {
+          "rank": 4,
+          "chunk_id": "cv/cv_raka_pratama#c3",
+          "section": "Pengalaman",
+          "scores": {
+            "rrf": 0.01613,
+            "bm25": 0.0,
+            "vector": 0.5958
+          }
+        },
+        {
+          "rank": 5,
+          "chunk_id": "cv/cv_raka_pratama#c1",
+          "section": "Ringkasan",
+          "scores": {
+            "rrf": 0.01587,
+            "bm25": 0.0,
+            "vector": 0.552
+          }
+        }
+      ],
+      "timing_ms": {
+        "retrieval": 2232,
+        "generation": 8510,
+        "relevance": 6039
+      }
+    },
+    "sertifikasi_relevan": {
+      "value": "Saya memiliki sertifikat Python untuk Analisis Data yang mencakup dasar Python, Pandas, NumPy, data cleaning, EDA, dan visualisasi data, serta proyek dashboard analisis penjualan. Saya juga memiliki sertifikat Dasar Machine Learning yang mempelajari model supervised learning, evaluasi model, dan feature engineering dengan scikit-learn. Kedua sertifikat ini sangat relevan dengan tugas seorang Data Analyst Intern.",
+      "status": "ok",
+      "sources": [
+        {
+          "chunk_id": "sertifikat/sert_python_analisis_data#c0",
+          "file": "sertifikat/sert_python_analisis_data.md",
+          "page": 1,
+          "section": "Dokumen lengkap"
+        },
+        {
+          "chunk_id": "sertifikat/sert_dasar_machine_learning#c0",
+          "file": "sertifikat/sert_dasar_machine_learning.md",
+          "page": 1,
+          "section": "Dokumen lengkap"
+        }
+      ],
+      "flags": [],
+      "support": 0.744,
+      "relevance": {
+        "relevant": true,
+        "reason": "Jawaban membahas secara spesifik sertifikasi yang relevan dengan posisi Data Analyst Intern, termasuk detail konten pelatihan dan kaitannya dengan tugas posisi. Ini langsung menjawab pertanyaan yang diajukan."
+      },
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "sertifikat/sert_python_analisis_data#c0",
+          "section": "Dokumen lengkap",
+          "scores": {
+            "rrf": 0.03252,
+            "bm25": 1.5829,
+            "vector": 0.6286
+          }
+        },
+        {
+          "rank": 2,
+          "chunk_id": "sertifikat/sert_backend_fastapi#c0",
+          "section": "Dokumen lengkap",
+          "scores": {
+            "rrf": 0.03227,
+            "bm25": 4.4028,
+            "vector": 0.4285
+          }
+        },
+        {
+          "rank": 3,
+          "chunk_id": "sertifikat/sert_dasar_machine_learning#c0",
+          "section": "Dokumen lengkap",
+          "scores": {
+            "rrf": 0.032,
+            "bm25": 0.6276,
+            "vector": 0.4729
+          }
+        },
+        {
+          "rank": 4,
+          "chunk_id": "sertifikat/sert_public_speaking#c0",
+          "section": "Dokumen lengkap",
+          "scores": {
+            "rrf": 0.01562,
+            "bm25": 0.0,
+            "vector": 0.3793
+          }
+        }
+      ],
+      "timing_ms": {
+        "retrieval": 2261,
+        "generation": 13869,
+        "relevance": 6734
+      }
+    },
+    "project_relevan": {
+      "value": "Saya mengerjakan project prediksi harga rumah Jabodetabek dengan model regresi menggunakan scikit-learn. Masalahnya adalah memprediksi harga rumah berdasarkan fitur-fitur seperti luas, jumlah kamar, dan lokasi. Saya melakukan data cleaning, feature engineering, dan evaluasi model. Hasilnya adalah model yang dapat memprediksi harga rumah dengan akurasi cukup tinggi.",
+      "status": "needs_review",
+      "sources": [
+        {
+          "chunk_id": "project/prediksi_harga_rumah#c4",
+          "file": "project/prediksi_harga_rumah.md",
+          "page": 1,
+          "section": "Peran saya"
+        },
+        {
+          "chunk_id": "cv/cv_raka_pratama#c4",
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "section": "Project"
+        }
+      ],
+      "flags": [
+        "dukungan_sumber_rendah"
+      ],
+      "support": 0.538,
+      "relevance": {
+        "relevant": true,
+        "reason": "Jawaban membahas secara spesifik masalah (prediksi harga rumah berdasarkan fitur), apa yang dilakukan (data cleaning, feature engineering, evaluasi model), dan hasilnya (akurasi tinggi), yang sesuai dengan pertanyaan."
+      },
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "project/prediksi_harga_rumah#c4",
+          "section": "Peran saya",
+          "scores": {
+            "rrf": 0.032,
+            "bm25": 3.9258,
+            "vector": 0.4628
+          }
+        },
+        {
+          "rank": 2,
+          "chunk_id": "cv/cv_raka_pratama#c2",
+          "section": "Pendidikan",
+          "scores": {
+            "rrf": 0.03178,
+            "bm25": 3.9679,
+            "vector": 0.3712
+          }
+        },
+        {
+          "rank": 3,
+          "chunk_id": "cv/cv_raka_pratama#c3",
+          "section": "Pengalaman",
+          "scores": {
+            "rrf": 0.0311,
+            "bm25": 0.6959,
+            "vector": 0.5173
+          }
+        },
+        {
+          "rank": 4,
+          "chunk_id": "cv/cv_raka_pratama#c1",
+          "section": "Ringkasan",
+          "scores": {
+            "rrf": 0.03105,
+            "bm25": 1.3826,
+            "vector": 0.4718
+          }
+        },
+        {
+          "rank": 5,
+          "chunk_id": "cv/cv_raka_pratama#c4",
+          "section": "Project",
+          "scores": {
+            "rrf": 0.03033,
+            "bm25": 2.4967,
+            "vector": 0.3347
+          }
+        }
+      ],
+      "timing_ms": {
+        "retrieval": 2309,
+        "generation": 13624,
+        "relevance": 6867
+      }
+    },
+    "pengalaman_organisasi": {
+      "value": "Saya memimpin divisi IT di Himpunan Mahasiswa Informatika dari 2023 hingga 2024, memimpin 8 anggota. Saya mengelola website himpunan dan sistem pendaftaran acara, serta menjadi koordinator teknis seminar \"Data untuk Semua\" yang diikuti 300 peserta.",
+      "status": "ok",
+      "sources": [
+        {
+          "chunk_id": "cv/cv_raka_pratama#c6",
+          "file": "cv/cv_raka_pratama.md",
+          "page": 1,
+          "section": "Organisasi"
+        },
+        {
+          "chunk_id": "organisasi/hima_informatika#c0",
+          "file": "organisasi/hima_informatika.md",
+          "page": 1,
+          "section": "Peran"
+        },
+        {
+          "chunk_id": "organisasi/hima_informatika#c1",
+          "file": "organisasi/hima_informatika.md",
+          "page": 1,
+          "section": "Kegiatan"
+        }
+      ],
+      "flags": [],
+      "support": 0.893,
+      "relevance": {
+        "relevant": true,
+        "reason": "Jawaban membahas secara spesifik peran dan pengalaman organisasi, termasuk divisi yang dipimpin, anggota, sistem yang dikelola, dan acara yang diikuti. Ini langsung merespons pertanyaan tentang pengalaman organisasi dan peran di sana."
+      },
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "cv/cv_raka_pratama#c3",
+          "section": "Pengalaman",
+          "scores": {
+            "rrf": 0.03227,
+            "bm25": 2.6236,
+            "vector": 0.538
+          }
+        },
+        {
+          "rank": 2,
+          "chunk_id": "cv/cv_raka_pratama#c1",
+          "section": "Ringkasan",
+          "scores": {
+            "rrf": 0.03175,
+            "bm25": 1.3826,
+            "vector": 0.4797
+          }
+        },
+        {
+          "rank": 3,
+          "chunk_id": "cv/cv_raka_pratama#c6",
+          "section": "Organisasi",
+          "scores": {
+            "rrf": 0.03154,
+            "bm25": 4.1734,
+            "vector": 0.3526
+          }
+        },
+        {
+          "rank": 4,
+          "chunk_id": "organisasi/hima_informatika#c0",
+          "section": "Peran",
+          "scores": {
+            "rrf": 0.03105,
+            "bm25": 2.9774,
+            "vector": 0.3371
+          }
+        },
+        {
+          "rank": 5,
+          "chunk_id": "organisasi/hima_informatika#c1",
+          "section": "Kegiatan",
+          "scores": {
+            "rrf": 0.03102,
+            "bm25": 0.9214,
+            "vector": 0.4236
+          }
+        }
+      ],
+      "timing_ms": {
+        "retrieval": 2222,
+        "generation": 12943,
+        "relevance": 7017
+      }
+    },
+    "motivasi": {
+      "value": "Saya tertarik dengan posisi Data Analyst karena pengalaman saya sebagai asisten laboratorium basis data membuat saya melihat bagaimana data dapat digunakan untuk memperbaiki keputusan sederhana seperti jadwal praktikum. Saya ingin belajar bagaimana analisis data digunakan untuk keputusan bisnis nyata, bukan hanya tugas kuliah. Saya juga ingin terbiasa bekerja dengan data yang berantakan dan berukuran besar.",
+      "status": "ok",
+      "sources": [
+        {
+          "chunk_id": "esai/motivasi_magang_data#c0",
+          "file": "esai/motivasi_magang_data.md",
+          "page": 1,
+          "section": "Paragraf"
+        }
+      ],
+      "flags": [],
+      "support": 0.875,
+      "relevance": {
+        "relevant": true,
+        "reason": "Jawaban membahas secara spesifik alasan penulis tertarik dengan posisi Data Analyst, termasuk pengalaman relevan, tujuan belajar, dan minat terhadap data yang berantakan dan besar. Ini langsung menjawab pertanyaan tentang alasan ketertarikan terhadap posisi tersebut."
+      },
+      "retrieved": [
+        {
+          "rank": 1,
+          "chunk_id": "esai/motivasi_magang_data#c0",
+          "section": "Paragraf",
+          "scores": {
+            "rrf": 0.03279,
+            "bm25": 5.4148,
+            "vector": 0.6615
+          }
+        }
+      ],
+      "timing_ms": {
+        "retrieval": 2263,
+        "generation": 9573,
+        "relevance": 7443
+      }
+    }
+  }
+}
