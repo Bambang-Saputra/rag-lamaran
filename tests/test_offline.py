@@ -99,6 +99,33 @@ def test_profile_regex():
     assert "linkedin.com/in/raka-pratama-dummy" in PROFILE["linkedin"]["value"]
 
 
+def test_extract_name_variants():
+    from rag.profile import extract_name
+    cases = {
+        "# Raka Pratama\nEmail: raka@example.com": "Raka Pratama",
+        "CURRICULUM VITAE\nBAMBANG SAPUTRA\nJakarta, Indonesia | bambang@example.com": "Bambang Saputra",
+        "Resume\n\nSiti Aminah\n0812-3456-7890": "Siti Aminah",
+        "DAFTAR RIWAYAT HIDUP\nData Pribadi\nNama Lengkap : Dewi Lestari\nTempat lahir: Bandung": "Dewi Lestari",
+        "Nama: Budi Santoso\nAlamat: Jl. Merdeka 1": "Budi Santoso",
+    }
+    for text, expected in cases.items():
+        assert extract_name(text)[0] == expected, (text, extract_name(text))
+    # Tidak ada baris yang mirip nama: lebih baik kosong daripada menebak salah.
+    assert extract_name("CURRICULUM VITAE\nbambang@example.com\n0812-3456-7890") is None
+
+
+def test_save_location_depends_on_data_dir():
+    import cli
+    from rag.config import ROOT
+    assert cli.output_dir(get_settings()) == ROOT / "outputs" / "examples"  # data dummy
+    os.environ["DATA_DIR"] = "data/private"
+    try:
+        s = get_settings()
+        assert cli.output_dir(s) == s.storage_dir / "examples"
+    finally:
+        os.environ["DATA_DIR"] = "data/dummy"
+
+
 def test_retrieve_filter_and_ranking():
     res = retrieve(INDEX, "sertifikat machine learning scikit-learn", 3, doc_types=["sertifikat"])
     assert res and all(r["doc_type"] == "sertifikat" for r in res)

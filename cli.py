@@ -30,15 +30,25 @@ from rag.warmup import warmup
 # Konsol Windows default-nya cp1252; paksa UTF-8 supaya karakter non-ASCII tidak bikin crash.
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-OUTPUT_DIR = ROOT / "outputs" / "examples"
+DUMMY_DATA_DIR = ROOT / "data" / "dummy"
+
+
+def output_dir(settings) -> Path:
+    """Contoh output dari data dummy disimpan di outputs/examples (ikut git, untuk reviewer).
+    Data lain (mis. data/private) disimpan di STORAGE_DIR/examples, yang di-ignore git,
+    supaya isi dokumen pribadi tidak ikut ter-commit."""
+    if settings.data_dir.resolve() == DUMMY_DATA_DIR.resolve():
+        return ROOT / "outputs" / "examples"
+    return settings.storage_dir / "examples"
 
 
 def _save(kind: str, label: str, payload: dict) -> Path:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    s = get_settings()
+    out_dir = output_dir(s)
+    out_dir.mkdir(parents=True, exist_ok=True)
     slug = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")[:50] or kind
-    path = OUTPUT_DIR / f"{datetime.now():%Y%m%d-%H%M%S}_{kind}_{slug}.json"
-    payload = {"saved_at": datetime.now().isoformat(timespec="seconds"),
-               "settings": get_settings().public(), **payload}
+    path = out_dir / f"{datetime.now():%Y%m%d-%H%M%S}_{kind}_{slug}.json"
+    payload = {"saved_at": datetime.now().isoformat(timespec="seconds"), "settings": s.public(), **payload}
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
 
