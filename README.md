@@ -1,37 +1,66 @@
-# RAG Lamaran: draf isian form lamaran magang dari dokumen pribadi
+# Sistem Pengisian Form Lamaran Otomatis
 
-> Status: pipeline sudah dijalankan dengan Ollama lokal dan dievaluasi pada 26 pertanyaan berlabel
-> (lihat bagian Evaluasi). Yang masih TODO hanya catatan penggunaan AI.
+Asisten RAG lokal yang menyusun draf isian form lamaran magang dari dokumen saya sendiri (CV, transkrip,
+sertifikat, laporan project, organisasi, esai), lengkap dengan sumbernya, supaya saya tinggal melakukan QC.
+Semua berjalan di laptop dengan Ollama, tanpa API key. Nama repo: `rag-lamaran`.
+
+Ringkasan hasil pada 26 pertanyaan berlabel (data dummy, satu run per model):
+
+- Retrieval hybrid (BM25 + vektor, digabung dengan RRF): Hit@5 100%, cakupan bukti 98%, MRR 0,917.
+- `qwen3:4b-instruct` (default): akurasi 90% pada 20 soal yang bisa dijawab, abstain benar pada 5 dari 6 soal
+  yang jawabannya tidak ada, sitasi benar 95%, median 8,5 detik per jawaban di GTX 1650 4 GB.
+- Cek relevansi menangkap jawaban yang didukung sumber tetapi menjawab hal lain, misalnya "TOEFL ITP 540" untuk
+  pertanyaan skor IELTS.
+- Angka ini kemungkinan terlalu optimis: dokumen dan pertanyaannya ditulis oleh orang yang sama, dan corpus-nya
+  hanya 34 chunk.
+
+Isi:
+[Masalah](#masalah) ·
+[Scope](#scope) ·
+[Dokumen](#dokumen) ·
+[Arsitektur](#arsitektur) ·
+[Model dan tools](#model-dan-tools) ·
+[Setup](#setup) ·
+[Cara menjalankan](#cara-menjalankan) ·
+[Browser extension](#browser-extension) ·
+[Konfigurasi](#konfigurasi) ·
+[Contoh output](#contoh-output) ·
+[Evaluasi](#evaluasi) ·
+[Keputusan desain](#keputusan-desain) ·
+[Keterbatasan](#keterbatasan) ·
+[Rencana selanjutnya](#rencana-selanjutnya) ·
+[Penggunaan AI](#penggunaan-ai)
 
 ## Masalah
 
-Saat mencari magang, saya mengisi form lamaran berulang kali dengan informasi yang sama. Sebagian
-pertanyaan juga membuat saya membuka CV, transkrip, sertifikat, dan laporan project untuk mencari jawaban
-yang relevan dengan posisi. Sistem ini mencari jawaban itu dari dokumen saya sendiri, menyusun draf isian,
-dan menyertakan sumbernya, jadi saya tinggal melakukan QC.
+Saat mencari magang, saya mengisi form lamaran berulang kali dengan informasi yang sama. Sebagian pertanyaan
+juga membuat saya membuka CV, transkrip, sertifikat, dan laporan project untuk mencari jawaban yang relevan
+dengan posisi. Sistem ini mencari jawaban itu dari dokumen saya sendiri, menyusun draf isian, dan menyertakan
+sumbernya.
 
 ## Scope
 
-- Sistem ini asisten di sisi pelamar. Form yang dipakai (`web/index.html`) adalah simulasi dan tidak
-  terhubung ke website perusahaan mana pun.
-- Sistem hanya membuat draf dan tidak pernah submit otomatis. Browser extension (MVP) bisa mengisi draf di halaman
-  lamaran, tetapi tidak pernah menekan Next atau Submit.
+- Asisten di sisi pelamar, bukan sistem rekrutmen perusahaan. Form di repo ini (`web/index.html` dan halaman
+  `/demo`) adalah simulasi dan tidak terhubung ke website perusahaan mana pun.
+- Sistem hanya membuat draf. Tidak ada yang dikirim otomatis: browser extension mengisi draf di halaman, tetapi
+  tidak pernah menekan Next atau Submit.
+- Semua berjalan lokal, jadi dokumen pribadi tidak keluar dari laptop.
 - Di luar scope: OCR untuk dokumen hasil scan.
 
 ## Dokumen
 
 | Folder | Isi | Status git |
 |---|---|---|
-| `data/dummy/` | Persona sintetis "Raka Pratama" (10 dokumen .md, ditulis manual untuk demo & tes) | di-commit |
+| `data/dummy/` | Persona sintetis "Raka Pratama": 10 file Markdown (sekitar 25 KB), ditulis manual untuk demo dan tes | di-commit |
 | `data/private/` | Dokumen asli saya (PDF) | di-ignore, tidak pernah di-commit |
 
 Tipe dokumen diambil dari nama subfolder: `cv`, `transkrip`, `sertifikat`, `project`, `organisasi`, `esai`.
-Semua nama, institusi, email, dan nomor di data dummy fiktif.
+Data dummy berisi 1 CV, 1 transkrip, 4 sertifikat, 2 laporan project, 1 dokumen organisasi, dan 1 esai, yang
+menjadi 34 chunk. Semua nama, institusi, email, dan nomor di dalamnya fiktif.
 
-Koleksi yang dipakai untuk evaluasi, contoh output, dan demo adalah data dummy: 10 file Markdown (sekitar
-25 KB) dalam 6 tipe (1 CV, 1 transkrip, 4 sertifikat, 2 laporan project, 1 organisasi, 1 esai), yang menjadi
-34 chunk. Pipeline juga menerima PDF dan TXT; jalur PDF dites dengan PDF assessment 13 halaman (nomor halaman
-di sitasi sesuai). Dokumen asli saya tidak dipakai di angka evaluasi mana pun dan tidak ada di repo.
+Evaluasi, contoh output, dan demo memakai data dummy. Pipeline juga menerima PDF dan TXT; jalur PDF dites dengan
+PDF assessment 13 halaman, dan nomor halaman di sitasinya sesuai. Dokumen asli saya tidak dipakai di angka mana
+pun dan tidak ada di repo.
 
 ## Arsitektur
 
@@ -43,43 +72,48 @@ Fase 1: indexing (python cli.py ingest)
     -> embedding (Ollama) + BM25
     -> storage/: chunks.jsonl, vectors.npy, profile.json, meta.json
 
-Fase 2: isi form (python cli.py autofill / web)
-  tiap field form
+Fase 2: tiap pertanyaan atau kolom form
+  kolom form
     -> fixed   : profile.json (regex dari CV, tanpa LLM)
+    -> manual  : kesediaan, gaji, jadwal (tidak dikirim ke LLM, diisi sendiri)
     -> factual : RAG, jawaban singkat
     -> open    : RAG, jawaban paragraf (posisi yang dilamar ikut di query)
-    -> validasi (sumber valid? didukung teks sumber? format benar?)
+    -> validasi (sumber valid? didukung teks sumber? relevan? format benar?)
     -> draf + status (ok / needs_review / not_found) + sumber -> QC manual
 ```
 
-CLI tanya-jawab dan form memakai fungsi inti yang sama, `rag.pipeline.answer()`.
+Semua antarmuka (CLI, web, tempel pertanyaan, extension) memakai fungsi inti yang sama, `rag.pipeline.answer()`.
+Tiap file di `rag/` mengerjakan satu tahap, jadi tiap tahap bisa dites dan diganti sendiri. Contohnya, evaluasi
+retrieval hanya memanggil `retrieve.py` tanpa LLM, dan tes offline mengganti embedding dan LLM dengan stub.
 
 | Modul | Tugas |
 |---|---|
 | `rag/loaders.py` | Ekstraksi teks per halaman dari PDF/MD/TXT |
 | `rag/chunking.py` | Strategi chunking per tipe dokumen; chunk tidak menyeberang halaman |
-| `rag/profile.py` | Nama (label "Nama:" atau baris nama di awal CV, judul seperti "Curriculum Vitae" dilewati), email, HP, LinkedIn, GitHub |
-| `rag/bm25.py`, `rag/embeddings.py`, `rag/index.py` | Index keyword + vektor |
+| `rag/profile.py` | Nama, email, HP, LinkedIn, GitHub dengan regex. Judul seperti "Curriculum Vitae" dilewati saat mencari nama |
+| `rag/bm25.py`, `rag/embeddings.py`, `rag/index.py` | Index keyword dan vektor |
 | `rag/retrieve.py` | Hybrid retrieval dengan Reciprocal Rank Fusion |
-| `rag/prompts.py`, `rag/llm.py` | Prompt, format konteks, panggilan LLM (output JSON) |
-| `rag/validate.py` | Cek sumber, grounding heuristik, cek relevansi, format isian |
-| `rag/autofill.py` | Routing per field berdasarkan `forms/magang_form.json`, dan klasifikasi pertanyaan yang ditempel |
+| `rag/prompts.py`, `rag/llm.py` | Prompt, format konteks, panggilan LLM dengan output JSON |
+| `rag/validate.py` | Cek sumber, dukungan sumber, relevansi, dan format isian |
+| `rag/pipeline.py` | `answer()`: retrieve, generate, validasi |
+| `rag/autofill.py` | Routing per kolom dari `forms/magang_form.json`, dan klasifikasi pertanyaan yang ditempel |
 | `rag/warmup.py` | Memuat model ke memori sebelum dipakai |
-| `cli.py`, `api.py`, `web/index.html` | Antarmuka |
-| `extension/` | Browser extension (Chrome/Edge, MV3) yang mengisi draf di halaman lamaran lewat `/api/draft` |
+| `cli.py`, `api.py`, `web/index.html` | Antarmuka CLI, server, dan halaman web |
+| `extension/` | Browser extension (Chrome/Edge, MV3) yang mengisi draf lewat `/api/draft` |
 | `web/demo_lamaran.html` | Halaman lamaran fiktif 2 langkah (`/demo`) untuk mencoba extension |
+| `evaluation/`, `tests/` | Set uji berlabel dan harness evaluasi; tes offline tanpa Ollama |
 
 ## Model dan tools
 
 | Komponen | Default | Alasan |
 |---|---|---|
-| LLM | `qwen3:4b-instruct` via Ollama (2,5 GB) | Gratis dan lokal, jadi dokumen pribadi tidak keluar dari laptop. Muat di VRAM 4 GB. Varian instruct ini tidak punya mode thinking, sehingga lebih cepat dan output JSON-nya lebih stabil |
-| Embedding | `qwen3-embedding:0.6b` via Ollama (639 MB) | Skor MTEB Multilingual tertinggi di kelas ~0.6B (mean 64.33, retrieval 64.64; bge-m3: 59.56 / 54.60). Query diberi instruksi tugas sesuai model card |
-| Vector store | Matriks numpy (exact search) | Corpus-nya kecil (puluhan dokumen), jadi pencarian exact cukup cepat, tanpa approximation error, dan mudah diinspeksi |
-| Keyword | BM25 implementasi sendiri | Nama skill/tools (SQL, FastAPI) adalah keyword exact |
+| LLM | `qwen3:4b-instruct` via Ollama (2,5 GB) | Gratis dan lokal. Muat di VRAM 4 GB. Varian instruct ini tidak punya mode thinking, jadi lebih cepat dan output JSON-nya stabil |
+| Embedding | `qwen3-embedding:0.6b` via Ollama (639 MB) | Skor MTEB Multilingual tertinggi di kelas ~0.6B (mean 64,33, retrieval 64,64; bge-m3: 59,56 / 54,60). Query diberi instruksi tugas sesuai model card |
+| Vector store | Matriks numpy (exact search) | Corpus-nya kecil, jadi pencarian exact cukup cepat, tanpa approximation error, dan mudah diinspeksi |
+| Keyword | BM25 implementasi sendiri | Nama skill dan tools (SQL, FastAPI) adalah keyword exact |
 | PDF | PyMuPDF | Ekstraksi teks per halaman untuk sitasi |
 
-Semua bisa diganti lewat `.env`.
+Semua bisa diganti lewat `.env` (lihat [Konfigurasi](#konfigurasi)).
 
 Versi yang dipakai (dicek 21 Okt 2026 dengan `ollama --version`, `ollama list`, `ollama show`):
 
@@ -91,21 +125,20 @@ Versi yang dipakai (dicek 21 Okt 2026 dengan `ollama --version`, `ollama list`, 
 | `qwen3.5:4b`, `gemma4:e2b` (hanya untuk perbandingan) | ID `d8b0f5e9760c`, `b37049369adf` |
 
 Model card Qwen3-4B-Instruct-2507 menyebut model ini hanya punya mode non-thinking, walaupun `ollama show`
-tetap mencantumkan capability "thinking". Parameter `think` tidak dikirim untuk model ini.
+tetap mencantumkan capability "thinking". Karena itu parameter `think` tidak dikirim untuk model ini.
 
-### Kandidat LLM yang dipertimbangkan (riset Oktober 2026)
-
-Batasannya: VRAM 4 GB, paham bahasa Indonesia, output JSON stabil, dan idealnya tanpa mode thinking.
+Kandidat LLM yang dipertimbangkan (riset Oktober 2026). Batasannya: VRAM 4 GB, paham bahasa Indonesia, output
+JSON stabil, dan idealnya tanpa mode thinking.
 
 | Model | Ukuran Ollama | Bukti yang ada | Catatan |
 |---|---|---|---|
-| `qwen3:4b-instruct` (2507) | 2,5 GB | IFEval 83.4, MMLU-ProX 61.6, INCLUDE 60.1 (model card) | Muat di VRAM, tanpa thinking. Default (dikonfirmasi di Evaluasi) |
+| `qwen3:4b-instruct` (2507) | 2,5 GB | IFEval 83.4, MMLU-ProX 61.6, INCLUDE 60.1 (model card) | Dipilih (dikonfirmasi di Evaluasi) |
 | `qwen3.5:4b` | 3,3-4,0 GB | IFEval 89.8, MMLU-ProX 71.5, INCLUDE 71.0 (model card, mode tidak dilabeli) | Thinking aktif secara default. Ada laporan `format` JSON diabaikan saat thinking dimatikan (Ollama issue #14645, varian 35B) |
-| `gemma4:e2b` | 4,6-7,5 GB | SEA-HELM Indonesia 64.13, instruction following 90.23 | Satu-satunya model kecil dengan skor bahasa Indonesia terverifikasi, tapi tidak muat utuh di VRAM 4 GB |
-| `llama3.2:3b`, `phi4-mini` | ~2-2,5 GB | - | Bahasa Indonesia tidak ada di daftar bahasa resminya, jadi tidak dipilih |
+| `gemma4:e2b` | 4,6-7,5 GB | SEA-HELM Indonesia 64.13, instruction following 90.23 | Satu-satunya model kecil dengan skor bahasa Indonesia terverifikasi, tetapi tidak muat utuh di VRAM 4 GB |
+| `llama3.2:3b`, `phi4-mini` | ~2-2,5 GB | - | Bahasa Indonesia tidak ada di daftar bahasa resminya |
 
-Angka di atas diambil dari model card dan leaderboard yang berbeda, jadi tidak bisa dibandingkan langsung.
-Perbandingan di kondisi yang sama ada di bagian Evaluasi.
+Angka di tabel ini diambil dari model card dan leaderboard yang berbeda, jadi tidak bisa dibandingkan langsung.
+Perbandingan di kondisi yang sama ada di bagian [Evaluasi](#evaluasi).
 
 ## Setup
 
@@ -138,24 +171,25 @@ python -m tests.test_offline                           # tes tanpa Ollama
 python -m evaluation.run_eval                          # evaluasi (lihat bagian Evaluasi)
 ```
 
-`--save` menyimpan output lengkap (chunk ter-retrieve, skor, jawaban, sumber, setting model). Kalau
-`DATA_DIR=data/dummy`, file disimpan ke `outputs/examples/` dan ikut di-commit sebagai contoh untuk reviewer.
-Untuk folder data lain (mis. `data/private`), file disimpan ke `storage/examples/`, yang di-ignore git,
-supaya isi dokumen pribadi tidak ikut ter-commit.
+`--save` menyimpan output lengkap: chunk ter-retrieve, skor, jawaban, sumber, dan setting model. Kalau
+`DATA_DIR=data/dummy`, file disimpan ke `outputs/examples/` dan ikut di-commit sebagai contoh. Untuk folder data
+lain (mis. `data/private`), file disimpan ke `storage/examples/` yang di-ignore git, supaya isi dokumen pribadi
+tidak ikut ter-commit.
 
-Halaman web punya tiga tab:
+`serve` dan `chat` memuat model di awal, dan model disimpan di memori selama `KEEP_ALIVE` (default 30 menit).
+
+Halaman web (`http://127.0.0.1:8000`) punya tiga tab:
+
 - Form simulasi: isi otomatis form contoh di `forms/magang_form.json`. Tombol "Kirim (simulasi)" hanya
   menyimpan draf dan hasil QC ke `storage/qc_log.jsonl`.
 - Tempel pertanyaan: salin pertanyaan dari form lamaran asli (satu per baris, maksimal 20), lalu salin draf
-  jawabannya kembali ke form asli. Jenis tiap pertanyaan ditebak dari teksnya: isian profil (nama, email, HP),
-  jawaban singkat, jawaban paragraf, atau "isi sendiri" untuk kesediaan, gaji, dan jadwal yang tidak bisa
-  diambil dari dokumen.
+  jawabannya kembali ke form itu. Jenis tiap pertanyaan ditebak dengan aturan dari teksnya: isian profil (nama,
+  email, HP), jawaban singkat, jawaban paragraf, atau "isi sendiri" untuk kesediaan, gaji, dan jadwal.
 - Chat: tanya bebas tentang dokumen. Tiap pertanyaan dijawab sendiri; sistem belum mengingat percakapan.
 
-Sistem tidak menyentuh website lain. Untuk form lamaran asli, draf disalin manual.
-`serve` dan `chat` memuat model di awal, dan model disimpan di memori selama `KEEP_ALIVE` (default 30 menit).
+### Waktu respons
 
-### Waktu respons (diukur 21 Okt 2026, GTX 1650 4 GB, `qwen3:4b-instruct`, cek relevansi aktif)
+Diukur 21 Okt 2026 di GTX 1650 4 GB dengan `qwen3:4b-instruct` dan cek relevansi aktif.
 
 | Kegiatan | Waktu |
 |---|---|
@@ -163,56 +197,56 @@ Sistem tidak menyentuh website lain. Untuk form lamaran asli, draf disalin manua
 | Memuat `qwen3:4b-instruct` dari kondisi tidak dimuat | 8,9 detik* |
 | Satu pertanyaan `ask` (retrieval 3,5 + generation 13,3 + cek relevansi 8,0) | 25,4 detik |
 | `chat`, 3 pertanyaan berturut-turut | 44 detik |
-| Form simulasi, 13 isian (8 lewat RAG) | 155-160 detik (88 detik tanpa cek relevansi) |
+| Form simulasi, 13 isian saat diukur (8 lewat RAG) | 155-160 detik (88 detik tanpa cek relevansi) |
 | Tempel 9 pertanyaan dari form (6 lewat RAG) | 121 detik |
 
 \* File model kemungkinan masih ada di cache sistem operasi. Saat evaluasi, memuat model butuh 26-101 detik.
 
-Retrieval sendiri butuh 2,2-3,5 detik per pertanyaan, lebih lama dari perkiraan. Dugaan: model embedding dan
-LLM berebut VRAM (`ollama ps`: LLM 34% di CPU). Ini belum diselidiki.
+Retrieval sendiri butuh 2,2-3,5 detik per pertanyaan. Dugaan penyebabnya: model embedding dan LLM berebut VRAM
+(`ollama ps`: 34% LLM berjalan di CPU). Ini belum diselidiki.
 
-Temuan dari tes mode tempel pertanyaan dengan model asli:
-- "Apakah kamu bersedia magang onsite di Jakarta selama 6 bulan?" dijawab "Ya" tanpa bukti. Cek relevansi menandainya,
-  tetapi pertanyaan seperti ini sekarang dikenali sebagai "isi sendiri" dan tidak dikirim ke LLM.
-- "Jurusan" dijawab dengan nama universitas. Cek relevansi menandainya `jawaban_tidak_relevan`.
-- "Asal universitas" dijawab benar tetapi ikut ditandai tidak relevan (salah tandai yang sama polanya dengan evaluasi).
-- Jawaban singkat kadang menambahkan informasi lain, misalnya jurusan diisi "S1 Teknik Informatika, Universitas
-  Nusantara Digital, 3,62". Dugaan penyebab: petunjuk "daftar dipisah koma" di prompt jawaban singkat. Prompt belum
-  diubah karena hasil evaluasi di bawah terikat pada prompt yang sekarang.
-
-### Browser extension (MVP)
+## Browser extension
 
 Extension di folder `extension/` membaca label kolom yang masih kosong di halaman lamaran, mengirimnya ke
 `/api/draft` di server lokal (jalur yang sama dengan mode tempel pertanyaan), lalu menulis draf ke kolom-kolom itu.
-Warna garis tepi kolom: hijau = terisi, kuning = perlu dicek, abu-abu = tidak ditemukan atau isi sendiri,
-biru = kamu memilih mengisi sendiri, abu-abu putus-putus = kamu memilih mengosongkan. Arahkan kursor ke kolom untuk
-melihat sumber dan flags. Extension tidak pernah menekan tombol halaman (Next, Submit), tidak menyentuh upload file
-atau CAPTCHA, dan tidak menimpa kolom yang sudah diisi pengguna.
+Extension tidak pernah menekan tombol halaman (Next, Submit), tidak menyentuh upload file atau CAPTCHA, dan tidak
+menimpa kolom yang sudah diisi pengguna.
 
-Kolom wajib dan tidak wajib:
-- Kolom dengan tanda `*` (atau atribut `required` / `aria-required`) langsung diisi.
-- Kolom tanpa tanda `*` tidak dikirim ke model dulu. Setelah kolom wajib selesai, panel di kanan bawah menanyakan
-  tiap kolom: "Isi dari dokumen", "Isi sendiri", atau "Kosongkan". Pilihan default-nya "Kosongkan", supaya sistem
-  tidak mengarang isian yang tidak diminta. Tombol "Semua dari dokumen" memilih isi untuk semuanya sekaligus.
-- Kalau halaman sama sekali tidak menandai kolom wajib, semua kolom ditanyakan dulu lewat panel yang sama.
+Warna garis tepi kolom:
 
-Isi otomatis setelah Next: setelah extension dijalankan sekali di sebuah tab, extension memantau halaman. Begitu
-kamu menekan Next dan muncul kolom kosong baru, extension langsung mengisinya dengan aturan wajib/tidak wajib di atas.
-Ini hanya untuk form yang berganti langkah tanpa reload halaman. Kalau halaman reload ke alamat baru, klik extension
-sekali lagi: extension sengaja hanya memakai izin `activeTab`, yang hilang saat tab pindah alamat, karena izin
-untuk semua website terlalu besar bagi extension yang memegang data pribadi. Fitur ini bisa dimatikan di popup.
+| Warna | Arti |
+|---|---|
+| Hijau | Terisi |
+| Kuning | Perlu dicek |
+| Abu-abu | Tidak ditemukan, atau isi sendiri |
+| Biru | Kamu memilih mengisi sendiri |
+| Abu-abu putus-putus | Kamu memilih mengosongkan |
 
-Pengalaman kerja dan pengalaman organisasi dipisah. Pertanyaan yang jelas menanyakan salah satunya (mis.
-"Pengalaman kerja / magang" atau "Pengalaman organisasi atau kepanitiaan") dibatasi ke tipe dokumen yang sesuai
-dan diberi instruksi supaya model tidak mencampur keduanya. Dokumen pengalaman kerja selain CV (mis. surat keterangan
-magang) bisa ditaruh di folder `pengalaman/` atau `kerja/`. Form simulasi juga punya isian terpisah untuk keduanya.
+Arahkan kursor ke kolom untuk melihat sumber dan flags-nya.
+
+Cara kerjanya:
+
+- Kolom wajib (tanda `*`, atau atribut `required` / `aria-required`) langsung diisi.
+- Kolom tidak wajib tidak dikirim ke model dulu. Setelah kolom wajib selesai, panel di kanan bawah menanyakan
+  tiap kolom: "Isi dari dokumen", "Isi sendiri", atau "Kosongkan". Default-nya "Kosongkan", supaya sistem tidak
+  mengarang isian yang tidak diminta. Kalau halaman sama sekali tidak menandai kolom wajib, semua kolom
+  ditanyakan lewat panel ini.
+- Isi otomatis setelah Next: setelah extension dijalankan sekali di sebuah tab, extension memantau halaman. Begitu
+  kamu menekan Next dan muncul kolom kosong baru, extension langsung mengisinya dengan aturan yang sama. Ini hanya
+  untuk form yang berganti langkah tanpa reload. Kalau halaman pindah alamat, klik extension sekali lagi. Fitur
+  ini bisa dimatikan di popup.
+- Pengalaman kerja dan pengalaman organisasi dipisah. Pertanyaan yang jelas menanyakan salah satunya dibatasi ke
+  tipe dokumen yang sesuai dan diberi instruksi supaya model tidak mencampur keduanya. Dokumen pengalaman kerja
+  selain CV (mis. surat keterangan magang) bisa ditaruh di folder `pengalaman/` atau `kerja/`.
 
 Pasang (Chrome atau Edge):
+
 1. Buka `chrome://extensions` (Edge: `edge://extensions`) dan aktifkan Developer mode.
 2. Klik "Load unpacked" lalu pilih folder `extension/`.
 3. Jalankan `python cli.py serve`. Popup extension menunjukkan apakah server dan model sudah siap.
 
 Demo dengan halaman lamaran fiktif:
+
 1. Buka `http://127.0.0.1:8000/demo`, isi posisi di popup extension, lalu klik "Isi draf di halaman ini"
    (atau Alt+Shift+D). Popup boleh ditutup; progres terlihat di banner kanan atas.
 2. Kolom wajib terisi. Pilih apa yang dilakukan untuk "Program studi / jurusan" (tidak wajib) di panel kanan bawah.
@@ -224,43 +258,31 @@ Label di halaman demo sengaja ditulis dengan 6 cara berbeda (`<label for>`, labe
 framework seperti React: panel ini hanya berubah lewat event `input`/`change`, jadi terlihat apakah isian dari
 extension benar-benar tercatat oleh halaman.
 
-Hasil tes (22 Okt 2026, model asli, logika `content.js` dan `/api/draft` dijalankan langsung di halaman demo):
-- Langkah 1: keenam label terbaca benar; 6 kolom terisi dalam 52 detik (5 terisi, 1 perlu dicek); semua tercatat di
-  panel state. Kolom langkah 2 yang masih tersembunyi tidak ikut terbaca.
-- Langkah 2: 4 kolom dalam 78 detik. Tiga textarea terisi paragraf (satu ditandai perlu dicek), dropdown kesediaan
-  dibiarkan kosong sebagai "isi sendiri", upload CV tidak disentuh, dan tidak ada tombol yang ditekan.
-- Versi pertama ini (tanpa pembedaan wajib/tidak wajib dan tanpa isi otomatis) sudah dicoba sebagai extension
-  terpasang di Chrome dan berjalan di kedua langkah.
+Hasil uji di halaman demo (22 Okt 2026, model asli):
 
-Hasil tes versi dengan kolom wajib/tidak wajib dan isi otomatis (22 Okt 2026, model asli, `content.js` dijalankan di
-halaman demo dengan harness yang meniru `background.js`):
-- Langkah 1: 5 kolom wajib terisi dalam 27 detik; "Program studi / jurusan" (tanpa `*`) masuk panel, dan setelah dipilih
-  "Isi dari dokumen" terisi lewat permintaan terpisah. Tes ini menemukan bug: label berupa teks di atas kolom
-  kehilangan tanda `*` sebelum dicek, sehingga "Asal universitas *" dianggap tidak wajib. Sudah diperbaiki.
-- Setelah "Selanjutnya" ditekan tanpa memanggil extension, kolom baru terdeteksi sekitar 1 detik kemudian dan
-  langkah 2 terisi otomatis (2 kolom wajib terisi dalam 50 detik, kesediaan dibiarkan untuk diisi sendiri). Bug yang
-  ditemukan: pemantau mengabaikan perubahan atribut `hidden` karena `[].every()` selalu bernilai true. Sudah diperbaiki.
-- "Pengalaman kerja / magang" dari dokumen berisi asisten laboratorium dan freelance UMKM, tanpa tercampur
-  organisasi. Kolom organisasi yang dipilih "Isi sendiri" dibiarkan kosong, diberi garis biru, dan langsung difokus.
-- Garis warna dan panel dari extension sendiri tidak memicu deteksi kolom baru.
-- Belum dites sebagai extension terpasang: pesan antara `content.js` dan `background.js` untuk panel pilihan dan isi
-  otomatis, serta toggle di popup. Logikanya sama dengan harness di atas, tetapi lewat `chrome.runtime.sendMessage`.
+- Langkah 1: keenam gaya label terbaca benar. 5 kolom wajib terisi dalam 27 detik dan tercatat di panel state.
+  "Program studi / jurusan" masuk panel dan terisi setelah dipilih "Isi dari dokumen".
+- Langkah 2: setelah "Selanjutnya" ditekan, kolom baru terdeteksi sekitar 1 detik kemudian dan 2 kolom wajib
+  terisi dalam 50 detik. Dropdown kesediaan dibiarkan untuk diisi sendiri, upload CV tidak disentuh, dan tidak
+  ada tombol yang ditekan.
+- "Pengalaman kerja / magang" berisi asisten laboratorium dan freelance UMKM, tanpa tercampur organisasi.
+- Dua bug ditemukan dan diperbaiki saat uji: tanda `*` hilang dari label berupa teks di atas kolom, dan pemantau
+  Next tidak bereaksi pada perubahan atribut `hidden`.
+- Versi pertama (tanpa pembedaan wajib/tidak wajib) sudah dicoba sebagai extension terpasang di Chrome pada kedua
+  langkah. Di versi sekarang, panel pilihan sudah terlihat berjalan saat terpasang; isi otomatis setelah Next baru
+  dites dengan harness yang meniru `background.js`.
 
 Keamanan: server tidak mengirim header CORS, jadi website lain yang terbuka di browser tidak bisa membaca jawaban
-dari server lokal. Extension boleh memanggil server karena `host_permissions` hanya untuk `127.0.0.1` dan `localhost`.
-
-Keterbatasan: label ditebak dengan aturan sehingga bisa meleset di form yang strukturnya tidak biasa; radio button,
-checkbox, dan form di dalam iframe (mis. Google Form yang di-embed) belum didukung; dropdown hanya diisi kalau teks
-opsinya cocok dengan jawaban; isi otomatis hanya untuk form tanpa reload; dan penanda wajib dibaca dari tanda `*`
-serta atribut `required`, jadi form yang menandai kolom wajib dengan cara lain (mis. hanya warna) dianggap tidak
-menandai kolom wajib, dan semua kolomnya ditanyakan lewat panel.
+dari server lokal. Extension boleh memanggil server karena `host_permissions` hanya untuk `127.0.0.1` dan
+`localhost`. Extension memakai izin `activeTab`, bukan izin untuk semua website, karena extension ini memegang
+data pribadi.
 
 ## Konfigurasi
 
 | Variabel | Default | Keterangan |
 |---|---|---|
 | `DATA_DIR` | `data/dummy` | Folder dokumen |
-| `STORAGE_DIR` | `storage` | Lokasi index & log |
+| `STORAGE_DIR` | `storage` | Lokasi index dan log |
 | `LLM_PROVIDER` | `ollama` | `ollama` atau `openai_compat` |
 | `LLM_MODEL`, `LLM_BASE_URL`, `LLM_API_KEY` | lihat `.env.example` | API key hanya untuk `openai_compat` |
 | `LLM_THINK` | kosong | `false` untuk mematikan thinking di model hybrid (qwen3.5, gemma4); biarkan kosong untuk model tanpa thinking |
@@ -280,61 +302,40 @@ Delapan contoh dijalankan pada 21 Okt 2026 dengan data dummy, `qwen3:4b-instruct
 cek relevansi aktif. Output lengkapnya (semua chunk ter-retrieve beserta teks dan skornya, jawaban, sumber,
 flags, waktu, dan setting model) ada di [`outputs/examples/`](outputs/examples/).
 
-Satu pertanyaan ditelusuri dari awal sampai akhir (E1, `python cli.py ask "Berapa IPK kumulatif saya?" --short --save`):
+Satu pertanyaan dari awal sampai akhir (E1, `python cli.py ask "Berapa IPK kumulatif saya?" --short --save`):
 
 1. Retrieval (2,3 detik) mengembalikan 5 chunk: `transkrip#c0` (header transkrip, ada "IPK Kumulatif: 3,62"),
    `cv#c2` (section Pendidikan, ada "IPK 3,62 / 4,00"), lalu `transkrip#c5`, `cv#c3`, `cv#c5`.
 2. Generation (8,5 detik): LLM menjawab "3,62" dan menyebut `transkrip#c0` dan `cv#c2` sebagai sumber.
-3. Validasi: kedua sumber ada di hasil retrieve, jawaban muncul utuh di teks sumber (support 1.0), dan cek
+3. Validasi: kedua sumber ada di hasil retrieve, jawaban muncul utuh di teks sumber (support 1,0), dan cek
    relevansi (5,3 detik) menilai jawaban relevan. Status akhirnya `ok`.
 
 | ID | Perintah dan pertanyaan | Chunk relevan yang ter-retrieve | Jawaban | Status | Catatan |
 |---|---|---|---|---|---|
 | E1 | `ask --short` "Berapa IPK kumulatif saya?" | `transkrip#c0` (rank 1), `cv#c2` (rank 2) | 3,62 | ok | Berhasil |
 | E2 | `ask --short` "Sertifikat apa saja yang saya dapat dari Akademi Data Nusantara?" | kedua sertifikat (rank 1 dan 4) | Python untuk Analisis Data, Dasar Machine Learning | ok | Berhasil, jawaban dari dua dokumen |
-| E3 | `ask` "Ceritakan project saya yang paling relevan untuk posisi Data Analyst Intern." | hanya 1 chunk project (`prediksi_harga_rumah#c4`, rank 3); rank 1 malah esai | Paragraf tentang project prediksi harga rumah | needs_review | Isi project benar, tetapi ada kalimat tambahan yang tidak ada di sumber (support 0.32), jadi ditandai |
+| E3 | `ask` "Ceritakan project saya yang paling relevan untuk posisi Data Analyst Intern." | hanya 1 chunk project (`prediksi_harga_rumah#c4`, rank 3); rank 1 malah esai | Paragraf tentang project prediksi harga rumah | needs_review | Isi project benar, tetapi ada kalimat tambahan yang tidak ada di sumber (support 0,32), jadi ditandai |
 | E4 | `ask` "Project atau pekerjaan apa saja yang pernah saya kerjakan dengan FastAPI?" | chunk sistem inventaris dan sertifikat FastAPI; section Pengalaman di CV (freelance UMKM) tidak masuk top-5 | Hanya sistem inventaris lab | ok | Gagal di retrieval: jawaban tidak lengkap tetapi tidak ditandai |
 | E5 | `ask` "Project computer vision apa yang pernah saya buat?" | project lain (tidak relevan) | tidak ditemukan | not_found | Berhasil abstain |
 | E6 | `ask --short` "Berapa skor IELTS saya?" | `cv#c7` (section Bahasa, isinya TOEFL) di rank 1 | tidak ditemukan | not_found | Berhasil, tidak tertipu skor TOEFL |
 | E7 | `draft` dengan [`forms/contoh_pertanyaan.txt`](forms/contoh_pertanyaan.txt) (6 pertanyaan) | lihat file | Nama, email, IPK benar; "Jurusan" dijawab nama universitas | campuran | "Jurusan" tertangkap cek relevansi; "Ceritakan pengalaman organisasi" ditandai karena dokumen organisasi tidak masuk top-3 tanpa filter tipe dan jawabannya menambah kalimat; pertanyaan kesediaan ditandai "isi sendiri" |
-| E8 | `autofill` form simulasi (13 isian) | lihat file | 11 ok, 2 needs_review | campuran | Isian organisasi lengkap karena form membatasi pencarian ke dokumen organisasi + CV. Isian project ditandai karena menulis "akurasi cukup tinggi", yang tidak ada di dokumen. Jurusan diisi beserta universitas dan IPK tetapi tidak ditandai |
+| E8 | `autofill` form simulasi (13 isian saat itu) | lihat file | 11 ok, 2 needs_review | campuran | Isian organisasi lengkap karena form membatasi pencarian ke dokumen organisasi dan CV. Isian project ditandai karena menulis "akurasi cukup tinggi", yang tidak ada di dokumen. Jurusan diisi beserta universitas dan IPK tetapi tidak ditandai |
 
 Waktu: 9-26 detik per pertanyaan `ask` (not_found lebih cepat karena tidak ada cek relevansi), 55 detik untuk
 E7, dan 158 detik untuk E8.
 
 Yang terlihat dari contoh ini:
+
 - Pertanyaan faktual dan pertanyaan tanpa bukti ditangani dengan baik (E1, E2, E5, E6).
-- Masalah retrieval tetap tidak terdeteksi oleh validasi kalau jawabannya benar tetapi tidak lengkap (E4).
+- Masalah retrieval tidak terdeteksi validasi kalau jawabannya benar tetapi tidak lengkap (E4).
 - Validasi menangkap kalimat tambahan yang tidak ada di sumber pada jawaban paragraf (E3, E7, E8), tetapi tidak
   menangkap jawaban singkat yang menambahkan informasi lain (jurusan di E8).
 - Filter tipe dokumen di config form membantu retrieval: isian organisasi di E8 lebih baik daripada pertanyaan
   yang sama di E7, yang mencari ke semua dokumen.
 
-## Keputusan desain
-
-- Chunking mengikuti tipe dokumen. CV dan laporan project punya heading yang jelas, jadi dipotong per section.
-  Sertifikat pendek, jadi satu dokumen jadi satu chunk. Judul dokumen dan nama section ikut di-index.
-- Chunk tidak pernah menyeberang halaman, supaya nomor halaman di sitasi tepat.
-- Isian tetap (nama, email, HP) diambil dengan regex, bukan LLM. Cara ini lebih cepat, hasilnya selalu sama,
-  dan tidak bisa berhalusinasi.
-- LLM wajib menyebut `chunk_id` sumbernya. Sumber yang tidak ada di hasil retrieve ditandai `sumber_tidak_valid`.
-- Grounding dicek secara heuristik: jawaban dibandingkan dengan teks sumber (substring / overlap token), dan
-  jawaban di bawah ambang ditandai `needs_review`.
-- INFO POSISI dipisah dari KONTEKS supaya deskripsi lowongan tidak dianggap bukti tentang pelamar.
-
-## Keterbatasan yang sudah diketahui
-
-- PDF hasil scan tidak punya teks. File seperti ini dilewati dengan peringatan (perlu OCR atau versi .md).
-- CV dua kolom bisa tercampur urutannya saat diekstrak; cek dengan `python cli.py chunks`.
-- Deteksi heading berbasis kata kunci dan huruf kapital, jadi heading dengan nama tak lazim tidak terdeteksi.
-- Ambang grounding (0.8 / 0.6) belum dievaluasi.
-- Tes offline memakai stub. Tes itu hanya membuktikan alurnya berjalan, bukan kualitas retrieval atau jawaban.
-- Jenis pertanyaan di mode tempel ditebak dengan pola kata (regex), jadi bisa salah untuk kalimat yang tidak biasa.
-- Nama diambil dari 10 baris pertama CV dengan heuristik (2-5 kata huruf, tanpa angka atau email). Kalau tidak
-  ada yang cocok, isian nama dikosongkan, bukan ditebak.
-- Chat belum punya ingatan percakapan; pertanyaan lanjutan seperti "yang kedua tadi apa?" tidak bisa dijawab.
-
 ## Evaluasi
+
+### Set uji
 
 Set uji ada di [`evaluation/questions.json`](evaluation/questions.json): 26 pertanyaan tentang persona dummy.
 
@@ -345,8 +346,8 @@ Set uji ada di [`evaluation/questions.json`](evaluation/questions.json): 26 pert
 | `open` (jawaban paragraf) | 5 | "Ceritakan project yang paling relevan untuk posisi Data Analyst Intern." |
 | `unanswerable` (jawabannya tidak ada, beberapa berupa jebakan) | 6 | "Berapa skor IELTS saya?" (yang ada hanya TOEFL) |
 
-Tiap pertanyaan punya `gold` (dokumen + potongan teks yang membuktikan jawaban), `must_include`
-(istilah yang wajib ada di jawaban), dan `must_not_include` (opsional). Retrieval dievaluasi tanpa filter tipe dokumen.
+Tiap pertanyaan punya `gold` (dokumen dan potongan teks yang membuktikan jawaban), `must_include` (istilah yang
+wajib ada di jawaban), dan `must_not_include` (opsional). Retrieval dievaluasi tanpa filter tipe dokumen.
 
 ```bash
 python -m evaluation.run_eval --check            # cek label cocok dengan chunk (tanpa Ollama)
@@ -355,33 +356,36 @@ python -m evaluation.run_eval                    # retrieval + semua model di ev
 python -m evaluation.run_eval --models qwen3:4b-instruct --limit 5   # uji cepat
 ```
 
-Untuk retrieval, metriknya hit@k, cakupan gold, dan MRR. Untuk generation: akurasi pada pertanyaan yang bisa
-dijawab, ketepatan abstain (`not_found`), salah abstain, halusinasi yang tertangkap validasi, persentase JSON
-valid, ketepatan sitasi, median detik per jawaban, dan porsi model yang ada di GPU (dari `ollama ps`).
-Hasil tersimpan di `outputs/eval/<waktu>/summary.md`. Model yang dibandingkan diatur di
-[`evaluation/models.json`](evaluation/models.json). Tiap model perlu di-`ollama pull`, dan `gemma4:e2b`
-sendiri berukuran 4,6 GB ke atas.
+Metrik retrieval: hit@k, cakupan gold, dan MRR. Metrik generation: akurasi pada pertanyaan yang bisa dijawab,
+ketepatan abstain (`not_found`), salah abstain, halusinasi yang tertangkap validasi, persentase JSON valid,
+ketepatan sitasi, median detik per jawaban, dan porsi model di GPU (dari `ollama ps`). Hasil tersimpan di
+`outputs/eval/<waktu>/summary.md`. Model yang dibandingkan diatur di [`evaluation/models.json`](evaluation/models.json);
+tiap model perlu di-`ollama pull` dulu, dan `gemma4:e2b` sendiri berukuran 4,6 GB ke atas.
 
-Hasil retrieval (diamati 18 Okt 2026, `qwen3-embedding:0.6b`, k=5, 20 pertanyaan yang bisa dijawab):
+### Retrieval
+
+Diamati 18 Okt 2026, `qwen3-embedding:0.6b`, k=5, 20 pertanyaan yang bisa dijawab.
 
 | Mode | Hit@5 | Cakupan gold | MRR |
 |---|---|---|---|
-| bm25 | 100% | 95% | 0.883 |
-| vector | 100% | 93% | 0.787 |
-| hybrid | 100% | 98% | 0.917 |
+| bm25 | 100% | 95% | 0,883 |
+| vector | 100% | 93% | 0,787 |
+| hybrid | 100% | 98% | 0,917 |
 
 - f03 "program studi": CV menulis "S1 Teknik Informatika" tanpa kata "program studi". BM25 hanya menemukan
   transkrip, sedangkan vector dan hybrid menemukan CV juga.
-- c01 "sertifikat dari Akademi Data Nusantara": vector hanya menemukan 1 dari 2 (rank 5). Nama lembaga
-  adalah keyword exact, jadi BM25 dan hybrid lebih baik di sini.
-- c02 "pekerjaan dengan FastAPI": vector menemukan keduanya, tetapi di hybrid chunk freelance di CV
-  terdorong keluar dari top-5. RRF tidak selalu lebih baik dari komponen terbaiknya.
+- c01 "sertifikat dari Akademi Data Nusantara": vector hanya menemukan 1 dari 2 (rank 5). Nama lembaga adalah
+  keyword exact, jadi BM25 dan hybrid lebih baik di sini.
+- c02 "pekerjaan dengan FastAPI": vector menemukan keduanya, tetapi di hybrid chunk freelance di CV terdorong
+  keluar dari top-5. RRF tidak selalu lebih baik dari komponen terbaiknya.
 
-Angka ini kemungkinan terlalu optimis. Dokumen dummy dan pertanyaannya ditulis oleh orang yang sama,
-dan corpus-nya kecil (34 chunk), sehingga top-5 sudah mencakup sekitar 15% corpus.
+Angka ini kemungkinan terlalu optimis. Dokumen dummy dan pertanyaannya ditulis oleh orang yang sama, dan
+corpus-nya kecil (34 chunk), sehingga top-5 sudah mencakup sekitar 15% corpus.
 
-Perbandingan tiga LLM (diamati 19 Okt 2026, satu run, Ollama 0.40.6, retrieval hybrid, k=5, temperature 0,
-GTX 1650 4 GB). Laporan lengkapnya di `outputs/eval/20261019-195450/summary.md`.
+### Perbandingan LLM
+
+Diamati 19 Okt 2026, satu run, Ollama 0.40.6, retrieval hybrid, k=5, temperature 0, GTX 1650 4 GB. Laporan
+lengkapnya di `outputs/eval/20261019-195450/summary.md`.
 
 | Model | Akurasi (20 bisa dijawab) | Abstain benar (6) | Halusinasi tertangkap validasi | JSON valid | Sitasi benar | Median per jawaban | Di GPU |
 |---|---|---|---|---|---|---|---|
@@ -389,29 +393,29 @@ GTX 1650 4 GB). Laporan lengkapnya di `outputs/eval/20261019-195450/summary.md`.
 | `qwen3.5:4b` (thinking off) | 90% (18/20) | 83% (5/6) | 0/1 | 100% | 85% | 9,2 detik | 48% |
 | `gemma4:e2b` (thinking off) | 95% (19/20) | 50% (3/6) | 0/3 | 100% | 90% | 6,0 detik | tidak terukur* |
 
-\* `ollama ps` melaporkan hanya 0,32 GB untuk `gemma4:e2b`, jauh di bawah ukuran unduhannya (4,6 GB), jadi angka GPU-nya tidak dipakai.
+\* `ollama ps` melaporkan hanya 0,32 GB untuk `gemma4:e2b`, jauh di bawah ukuran unduhannya (4,6 GB), jadi angka
+GPU-nya tidak dipakai.
 
 Temuan:
+
 - Akurasi pada pertanyaan yang bisa dijawab hampir sama. Selisihnya 1 soal (5 poin persen), dan dengan 20 soal
   itu belum bisa disebut perbedaan nyata.
 - Perbedaan terbesar ada di pertanyaan yang jawabannya tidak ada. `gemma4:e2b` mengarang di 3 dari 6, termasuk
   menjawab "TOEFL ITP 540" untuk pertanyaan skor IELTS. Tidak satu pun tertangkap validasi karena isinya memang
   ada di dokumen. Untuk form lamaran, isian yang salah tapi terlihat yakin lebih berbahaya daripada isian kosong.
-- Validasi hanya mengecek apakah jawaban didukung sumber, bukan apakah jawaban relevan dengan pertanyaan.
-  Semua halusinasi yang lolos (`qwen3.5` u02, `gemma4` u01/u02/u03) adalah fakta benar yang menjawab pertanyaan lain.
 - `gemma4:e2b` paling sering menyebut `chunk_id` yang tidak ada (f04, o02, o05), sehingga jawabannya ditandai
   `needs_review` walaupun isinya benar.
-- Jawaban stabil antar run selama urutan panggilan ke model sama. Teks jawaban sama persis (0/26 berubah)
-  untuk `qwen3:4b-instruct` di run 18, 19, dan 20 Okt, dan untuk `qwen3.5:4b` serta `gemma4:e2b` di run 19 dan
-  20 Okt. Satu-satunya kondisi yang membuat jawaban berubah adalah cek relevansi yang diselipkan di antara soal
-  (lihat bagian Cek relevansi).
+- Jawaban stabil antar run selama urutan panggilan ke model sama: teks jawaban sama persis (0/26 berubah) untuk
+  `qwen3:4b-instruct` di run 18, 19, dan 20 Okt, dan untuk `qwen3.5:4b` serta `gemma4:e2b` di run 19 dan 20 Okt.
 
-Keputusan: `qwen3:4b-instruct` tetap jadi default, walaupun selisihnya dengan `qwen3.5:4b` kecil. Akurasi
-keduanya sama (90%), dan selisih 1 soal pun sebaiknya tidak dianggap berarti dengan 20 soal. `qwen3:4b-instruct`
-dipilih karena sitasinya paling tepat, porsinya di GPU lebih besar (66% vs 48%), dan lebih cepat.
-`gemma4:e2b` paling cepat, tetapi terlalu sering mengarang pada pertanyaan yang jawabannya tidak ada.
+Keputusan: `qwen3:4b-instruct` tetap jadi default. Akurasinya sama dengan `qwen3.5:4b` (90%), tetapi sitasinya
+paling tepat, porsinya di GPU lebih besar (66% vs 48%), dan lebih cepat. `gemma4:e2b` paling cepat, tetapi
+terlalu sering mengarang pada pertanyaan yang jawabannya tidak ada.
 
-Analisis kegagalan `qwen3:4b-instruct`:
+Catatan memori: model embedding ikut termuat di VRAM (1,23 GB), sehingga hanya 66% `qwen3:4b-instruct` yang muat
+di GPU.
+
+### Analisis kegagalan `qwen3:4b-instruct`
 
 | ID | Yang terjadi | Sumber masalah |
 |---|---|---|
@@ -421,37 +425,35 @@ Analisis kegagalan `qwen3:4b-instruct`:
 | c03 | Dinilai benar oleh grader, tetapi menyebut "mata kuliah Machine Learning dengan nilai 88/100". Nilai 88 milik sertifikat, nilai mata kuliahnya A | Generation (mencampur fakta). Grader berbasis kata kunci tidak menangkap ini; dua model lain tidak melakukannya |
 | f08 | Jawaban benar ("A-") tetapi `chunk_id` yang disebut tidak ada di hasil retrieve (run 18 Okt) | Generation (format sitasi). Validasi bekerja sesuai desain |
 
-Catatan memori: model embedding ikut termuat di VRAM (1,23 GB), sehingga hanya 66% `qwen3:4b-instruct` yang muat
-di GPU. Memuat model pertama kali butuh 26-101 detik, tergantung modelnya.
+Cara membedakannya: lihat dulu chunk yang ter-retrieve. Kalau bukti tidak ada di sana, masalahnya di retrieval;
+kalau bukti ada tetapi jawabannya salah, masalahnya di generation.
 
-### Cek relevansi (diamati 19 Okt 2026)
+### Cek relevansi
 
 Semua halusinasi yang lolos validasi di atas adalah fakta yang ada di dokumen tetapi menjawab pertanyaan lain
 (ditanya IELTS dijawab TOEFL; ditanya project computer vision dijawab project lain). `support_ratio` tidak bisa
 menangkap ini karena jawabannya memang didukung sumber.
 
 Yang dicoba:
+
 1. Cek kata kunci, yaitu menandai pertanyaan yang memuat istilah yang tidak ada di dokumen mana pun. Cara ini
    ditolak karena akan menandai 14 dari 20 pertanyaan yang bisa dijawab: kata umum seperti "kapan", "sudah",
    dan "rencana" juga tidak ada di dokumen.
 2. LLM sebagai pemeriksa (`rag/validate.py: check_relevance`). Model yang sama dipanggil sekali lagi dan hanya
-   melihat pertanyaan + jawaban. Kalau jawabannya membahas hal lain, jawaban ditandai `jawaban_tidak_relevan`
+   melihat pertanyaan dan jawaban. Kalau jawabannya membahas hal lain, jawaban ditandai `jawaban_tidak_relevan`
    (status `needs_review`). Contoh di prompt pemeriksa sengaja dipilih yang tidak ada di set evaluasi.
 
-Run pertama dengan pemeriksa (`20261019-213650`) menjalankan cek relevansi langsung setelah tiap jawaban.
-Ternyata 6/26 (`qwen3`), 7/26 (`qwen3.5`), dan 2/26 (`gemma4`) jawaban berubah teksnya dibanding run tanpa cek,
-walaupun cek itu sendiri tidak menyentuh jawaban. Akurasi `qwen3.5` bahkan naik dari 90% ke 95% karena c01
-kebetulan berubah menjadi benar.
+Temuan tak terduga: di run pertama (`20261019-213650`), cek relevansi dijalankan langsung setelah tiap jawaban,
+dan 6/26 (`qwen3`), 7/26 (`qwen3.5`), dan 2/26 (`gemma4`) jawaban berubah teksnya dibanding run tanpa cek,
+walaupun cek itu sendiri tidak menyentuh jawaban. Untuk menguji dugaan bahwa panggilan pemeriksa di antara soal
+memengaruhi jawaban berikutnya, evaluasi dijalankan dua tahap (`--relevance-stage separate`, default): semua soal
+di-generate dulu, baru semua jawaban diperiksa. Di run `20261020-004417`, teks jawaban ketiga model sama persis
+dengan run tanpa cek (0/26 berubah). Penyebabnya terisolasi pada panggilan yang diselipkan, walaupun mekanisme
+pastinya (dugaan: cache prompt di Ollama) belum dibuktikan. Autofill di aplikasi memakai urutan dua tahap yang sama.
 
-Untuk menguji dugaan bahwa panggilan pemeriksa di antara soal memengaruhi jawaban berikutnya, evaluasi
-dijalankan dua tahap (`--relevance-stage separate`, default): semua soal di-generate dulu, baru semua jawaban
-diperiksa. Di run `20261020-004417`, teks jawaban ketiga model sama persis dengan run tanpa cek (0/26 berubah).
-Jadi penyebabnya adalah panggilan yang diselipkan, walaupun mekanisme pastinya (dugaan: cache prompt di Ollama)
-belum dibuktikan. Autofill di aplikasi memakai urutan dua tahap yang sama.
+Hasil cek relevansi dari run dua tahap `20261020-004417`:
 
-Hasil cek relevansi dari run dua tahap `20261020-004417` (jawabannya identik dengan run tanpa cek):
-
-| Model | Jawaban salah yang tertangkap cek relevansi | Jawaban benar yang ikut ditandai | Median detik per jawaban (tanpa -> dengan cek) |
+| Model | Jawaban salah yang tertangkap | Jawaban benar yang ikut ditandai | Median detik per jawaban (tanpa -> dengan cek) |
 |---|---|---|---|
 | `qwen3:4b-instruct` | 0/3 | 3/18 (f07, f08, f12) | 8,5 -> 14,4 |
 | `qwen3.5:4b` | 2/3 (c01, u02) | 1/18 (f12) | 9,2 -> 15,1 |
@@ -463,56 +465,117 @@ Hasil cek relevansi dari run dua tahap `20261020-004417` (jawabannya identik den
   asisten lab yang disajikan sebagai magang (`qwen3.5`).
 - Ketiga jawaban salah `qwen3` (c02 dan o03 tidak lengkap; u02 "tidak pernah magang") memang menjawab
   pertanyaannya, jadi wajar tidak ditandai. u02 tetap tertangkap oleh cek dukungan sumber.
-- Pemeriksa yang sama meloloskan u02 milik `gemma4`.
 - Semua jawaban benar yang ikut ditandai adalah jawaban singkat tanpa konteks, misalnya "40" tanpa kata "jam"
   atau "Kelas Koding Indonesia" yang tidak dikenali sebagai nama lembaga.
 - Biayanya sekitar 3,5-6 detik tambahan per jawaban.
 
-Keputusan: `RELEVANCE_CHECK=true` jadi default. Untuk form lamaran, isian yang salah tetapi terlihat yakin
-lebih berbahaya daripada satu isian tambahan yang perlu dicek. Di PC yang lebih lambat, cek ini bisa dimatikan.
-Perbaikan prompt pemeriksa untuk jawaban singkat sebaiknya diuji pada set pertanyaan baru, bukan set ini,
-supaya prompt-nya tidak disesuaikan dengan soal ujian.
+Keputusan: `RELEVANCE_CHECK=true` jadi default. Untuk form lamaran, isian yang salah tetapi terlihat yakin lebih
+berbahaya daripada satu isian tambahan yang perlu dicek. Di PC yang lebih lambat, cek ini bisa dimatikan.
+Perbaikan prompt pemeriksa untuk jawaban singkat sebaiknya diuji pada set pertanyaan baru, supaya prompt-nya tidak
+disesuaikan dengan soal ujian.
 
-## Eksperimen
+### Temuan dari uji manual
 
-Sudah dijalankan (hasilnya di bagian Evaluasi):
-1. Retrieval `bm25` vs `vector` vs `hybrid`.
-2. LLM kecil di VRAM 4 GB: `qwen3:4b-instruct` vs `qwen3.5:4b` vs `gemma4:e2b`.
-3. Cek relevansi jawaban terhadap pertanyaan (cek kata kunci ditolak, pemeriksa LLM dipakai).
-4. Cek relevansi inline vs dua tahap (dua tahap membuat jawaban identik dengan run tanpa cek).
+Dari uji mode tempel pertanyaan dan form simulasi dengan model asli:
 
-Belum dijalankan:
-5. Autofill full-context (semua dokumen masuk prompt) vs retrieval per field.
-6. Tingkat edit setelah QC dari `storage/qc_log.jsonl`.
-7. Instruksi query embedding: dengan vs tanpa `EMBED_QUERY_INSTRUCTION` (recall@k).
-8. Embedding dijalankan di CPU supaya LLM mendapat seluruh VRAM (kecepatan vs akurasi retrieval).
-9. Set pertanyaan kedua (held-out) untuk menguji perbaikan prompt pemeriksa tanpa menyesuaikan dengan set ini.
-10. Mekanisme perubahan jawaban saat cek diselipkan (cache prompt Ollama?). Penyebabnya sudah terisolasi:
-    dengan evaluasi dua tahap, jawaban kembali identik.
+- "Apakah kamu bersedia magang onsite di Jakarta selama 6 bulan?" sempat dijawab "Ya" tanpa bukti. Cek relevansi
+  menandainya, dan sekarang pertanyaan seperti ini dikenali sebagai "isi sendiri" dan tidak dikirim ke LLM.
+- "Jurusan" dijawab dengan nama universitas, dan cek relevansi menandainya `jawaban_tidak_relevan`.
+- "Asal universitas" dijawab benar tetapi ikut ditandai tidak relevan (pola salah tandai yang sama dengan evaluasi).
+- Jawaban singkat kadang menambahkan informasi lain, misalnya jurusan diisi "S1 Teknik Informatika, Universitas
+  Nusantara Digital, 3,62". Dugaan penyebab: petunjuk "daftar dipisah koma" di prompt jawaban singkat. Prompt belum
+  diubah karena hasil evaluasi di atas terikat pada prompt yang sekarang.
+
+## Keputusan desain
+
+- Chunking mengikuti tipe dokumen. CV dan laporan project punya heading yang jelas, jadi dipotong per section.
+  Sertifikat pendek, jadi satu dokumen menjadi satu chunk. Judul dokumen dan nama section ikut di-index.
+- Chunk tidak pernah menyeberang halaman, supaya nomor halaman di sitasi tepat.
+- Isian tetap (nama, email, HP) diambil dengan regex, bukan LLM: lebih cepat, hasilnya selalu sama, dan tidak
+  bisa berhalusinasi.
+- Pertanyaan kesediaan, gaji, dan jadwal tidak dikirim ke LLM, karena jawabannya tidak ada di dokumen mana pun.
+- Jenis pertanyaan ditebak dengan aturan, bukan LLM, supaya cepat dan bisa ditelusuri.
+- LLM wajib menyebut `chunk_id` sumbernya. Sumber yang tidak ada di hasil retrieve ditandai `sumber_tidak_valid`.
+- Dukungan sumber dicek secara heuristik: jawaban dibandingkan dengan teks sumber (substring / overlap token), dan
+  jawaban di bawah ambang ditandai `needs_review`.
+- INFO POSISI dipisah dari KONTEKS supaya deskripsi lowongan tidak dianggap bukti tentang pelamar.
+- Cek relevansi dijalankan setelah semua jawaban selesai (dua tahap), supaya tidak mengubah jawaban.
+
+## Keterbatasan
+
+Data dan evaluasi:
+
+- Semua angka berasal dari data dummy yang rapi dan ditulis sendiri. Dokumen asli belum diuji dengan set berlabel.
+- Set uji kecil (26 soal), satu run per model, dan grader berbasis kata kunci tidak menangkap fakta yang tercampur
+  (c03).
+- Ambang dukungan sumber (0,8 / 0,6) belum dievaluasi.
+- Tes offline memakai stub. Tes itu hanya membuktikan alurnya berjalan, bukan kualitas retrieval atau jawaban.
+
+Pipeline:
+
+- PDF hasil scan tidak punya teks. File seperti ini dilewati dengan peringatan (perlu OCR atau versi .md).
+- CV dua kolom bisa tercampur urutannya saat diekstrak; cek dengan `python cli.py chunks`.
+- Deteksi heading berbasis kata kunci dan huruf kapital, jadi heading dengan nama tak lazim tidak terdeteksi.
+- Nama diambil dari 10 baris pertama CV dengan heuristik (2-5 kata huruf, tanpa angka atau email). Kalau tidak
+  ada yang cocok, isian nama dikosongkan, bukan ditebak.
+- Jawaban singkat kadang menambahkan informasi yang tidak ditanya.
+- Retrieval butuh 2-3,5 detik, dan 34% LLM masih berjalan di CPU.
+- Jenis pertanyaan di mode tempel ditebak dengan pola kata, jadi bisa salah untuk kalimat yang tidak biasa.
+- Chat belum punya ingatan percakapan; pertanyaan lanjutan seperti "yang kedua tadi apa?" tidak bisa dijawab.
+
+Extension:
+
+- Label ditebak dengan aturan, jadi bisa meleset di form yang strukturnya tidak biasa.
+- Radio button, checkbox, dan form di dalam iframe (mis. Google Form yang di-embed) belum didukung.
+- Dropdown hanya diisi kalau teks opsinya cocok dengan jawaban.
+- Isi otomatis setelah Next hanya untuk form tanpa reload.
+- Penanda wajib dibaca dari tanda `*` dan atribut `required`. Form yang menandai kolom wajib dengan cara lain
+  (mis. hanya warna) dianggap tidak menandai kolom wajib, jadi semua kolomnya ditanyakan lewat panel.
 
 ## Rencana selanjutnya
 
 Urutan berdasarkan dampak untuk pemakaian nyata:
 
 1. Uji dengan dokumen asli (PDF CV dua kolom, transkrip berbentuk tabel, sertifikat hasil scan) dan buat set
-   pertanyaan berlabel kedua dari dokumen itu. Semua angka di atas berasal dari data dummy yang rapi, jadi ini
-   cara paling langsung untuk tahu seberapa jauh hasilnya turun.
-2. Perbaiki prompt jawaban singkat supaya tidak menambahkan informasi lain (contoh jurusan yang diisi beserta
-   universitas dan IPK), lalu jalankan ulang evaluasi. Perubahan prompt harus diikuti evaluasi ulang karena
-   angka di README terikat pada prompt yang sekarang.
+   pertanyaan berlabel kedua dari dokumen itu. Ini cara paling langsung untuk tahu seberapa jauh hasilnya turun.
+2. Perbaiki prompt jawaban singkat supaya tidak menambahkan informasi lain, lalu jalankan ulang evaluasi.
 3. Bank jawaban dari `storage/qc_log.jsonl`: jawaban yang sudah di-QC dipakai ulang untuk pertanyaan yang mirip di
-   form lain. Ini bisa memotong waktu jawaban dari belasan detik menjadi hampir instan untuk pertanyaan yang
-   berulang, dan hasilnya sudah dicek manusia.
-4. Lanjutan extension (MVP, kolom wajib/tidak wajib, dan isi otomatis untuk form tanpa reload sudah ada): dukungan
-   radio button/checkbox/iframe, isi otomatis untuk form yang reload ke alamat baru (butuh izin yang lebih luas,
-   jadi harus opsional), dan token sederhana antara extension dan server. Pengguna tetap menekan "Next" dan
-   "Submit" sendiri, karena di banyak form menekan "Next" sudah mengirim isian ke server perusahaan.
-5. Jalankan model embedding di CPU supaya LLM mendapat seluruh VRAM (`ollama ps`: 34% LLM ada di CPU), lalu
-   ukur pengaruhnya ke waktu jawaban dan kualitas retrieval.
+   form lain. Pertanyaan yang berulang bisa dijawab hampir instan, dan hasilnya sudah dicek manusia.
+4. Lanjutan extension: radio button, checkbox, iframe, isi otomatis untuk form yang reload ke alamat baru (butuh
+   izin lebih luas, jadi harus opsional), dan token sederhana antara extension dan server. Pengguna tetap menekan
+   Next dan Submit sendiri, karena di banyak form menekan Next sudah mengirim isian ke server perusahaan.
+5. Jalankan model embedding di CPU supaya LLM mendapat seluruh VRAM, lalu ukur pengaruhnya ke waktu jawaban dan
+   kualitas retrieval.
 6. Ingatan percakapan di mode chat untuk pertanyaan lanjutan.
-7. Eksperimen klasifikasi pertanyaan di mode tempel: aturan (sekarang) vs LLM, diukur dari ketepatan dan waktu.
+
+Eksperimen yang belum dijalankan:
+
+- Autofill full-context (semua dokumen masuk prompt) vs retrieval per kolom.
+- Tingkat edit setelah QC dari `storage/qc_log.jsonl`.
+- Instruksi query embedding: dengan vs tanpa `EMBED_QUERY_INSTRUCTION`.
+- Klasifikasi pertanyaan di mode tempel: aturan (sekarang) vs LLM, diukur dari ketepatan dan waktu.
+- Mekanisme pasti perubahan jawaban saat cek relevansi diselipkan (cache prompt Ollama?).
 
 ## Penggunaan AI
 
-Kerangka kode awal dibuat dengan bantuan Claude Code (Anthropic).
-TODO: jelaskan bagian mana yang saya cek, ubah, dan kembangkan sendiri.
+Proyek ini saya kerjakan dengan bantuan Claude Code (Anthropic) sebagai asisten coding.
+
+Yang saya kerjakan sendiri:
+
+- Ide dan konsep: masalahnya berasal dari pengalaman saya mengisi form lamaran berulang kali. Saya juga yang
+  menentukan batasan sistemnya: di sisi pelamar, berjalan lokal, hanya membuat draf, dan tidak pernah submit.
+- Alur kerja dan keputusan desain: alur dari dokumen sampai draf yang saya cek, model harus muat di laptop saya
+  (VRAM 4 GB), klasifikasi pertanyaan memakai aturan supaya cepat, kolom wajib langsung diisi sedangkan kolom
+  tidak wajib ditanyakan dulu, dan pengalaman kerja dipisah dari pengalaman organisasi.
+- Arah evaluasi: membandingkan tiga model pada set uji berlabel, menambahkan cek relevansi untuk menangkap
+  halusinasi, dan menguji dugaan penyebab jawaban berubah lewat evaluasi dua tahap.
+- QC hasil akhir: mencoba sistem dan extension di Chrome sendiri, mengecek apakah hasilnya sesuai dengan input
+  yang saya harapkan, dan memberi masukan supaya nyaman dipakai sehari-hari. Contohnya, extension yang langsung
+  mengisi langkah berikutnya setelah Next berasal dari uji coba saya.
+
+Yang dibantu AI:
+
+- Menulis sebagian besar kode (pipeline, evaluasi, halaman web, extension) berdasarkan alur dan keputusan di atas.
+- Riset kandidat model yang muat di VRAM 4 GB.
+- Menjalankan evaluasi, merangkum hasilnya, dan mencari bug.
+- Menyusun draf README dan slide presentasi.
