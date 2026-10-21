@@ -14,8 +14,9 @@ dan menyertakan sumbernya, jadi saya tinggal melakukan QC.
 
 - Sistem ini asisten di sisi pelamar. Form yang dipakai (`web/index.html`) adalah simulasi dan tidak
   terhubung ke website perusahaan mana pun.
-- Sistem hanya membuat draf dan tidak pernah submit otomatis.
-- Di luar scope: integrasi ke website lamaran asli (misalnya lewat browser extension) dan OCR untuk dokumen hasil scan.
+- Sistem hanya membuat draf dan tidak pernah submit otomatis. Browser extension (MVP) bisa mengisi draf di halaman
+  lamaran, tetapi tidak pernah menekan Next atau Submit.
+- Di luar scope: OCR untuk dokumen hasil scan.
 
 ## Dokumen
 
@@ -65,6 +66,8 @@ CLI tanya-jawab dan form memakai fungsi inti yang sama, `rag.pipeline.answer()`.
 | `rag/autofill.py` | Routing per field berdasarkan `forms/magang_form.json`, dan klasifikasi pertanyaan yang ditempel |
 | `rag/warmup.py` | Memuat model ke memori sebelum dipakai |
 | `cli.py`, `api.py`, `web/index.html` | Antarmuka |
+| `extension/` | Browser extension (Chrome/Edge, MV3) yang mengisi draf di halaman lamaran lewat `/api/draft` |
+| `web/demo_lamaran.html` | Halaman lamaran fiktif 2 langkah (`/demo`) untuk mencoba extension |
 
 ## Model dan tools
 
@@ -176,6 +179,81 @@ Temuan dari tes mode tempel pertanyaan dengan model asli:
 - Jawaban singkat kadang menambahkan informasi lain, misalnya jurusan diisi "S1 Teknik Informatika, Universitas
   Nusantara Digital, 3,62". Dugaan penyebab: petunjuk "daftar dipisah koma" di prompt jawaban singkat. Prompt belum
   diubah karena hasil evaluasi di bawah terikat pada prompt yang sekarang.
+
+### Browser extension (MVP)
+
+Extension di folder `extension/` membaca label kolom yang masih kosong di halaman lamaran, mengirimnya ke
+`/api/draft` di server lokal (jalur yang sama dengan mode tempel pertanyaan), lalu menulis draf ke kolom-kolom itu.
+Warna garis tepi kolom: hijau = terisi, kuning = perlu dicek, abu-abu = tidak ditemukan atau isi sendiri,
+biru = kamu memilih mengisi sendiri, abu-abu putus-putus = kamu memilih mengosongkan. Arahkan kursor ke kolom untuk
+melihat sumber dan flags. Extension tidak pernah menekan tombol halaman (Next, Submit), tidak menyentuh upload file
+atau CAPTCHA, dan tidak menimpa kolom yang sudah diisi pengguna.
+
+Kolom wajib dan tidak wajib:
+- Kolom dengan tanda `*` (atau atribut `required` / `aria-required`) langsung diisi.
+- Kolom tanpa tanda `*` tidak dikirim ke model dulu. Setelah kolom wajib selesai, panel di kanan bawah menanyakan
+  tiap kolom: "Isi dari dokumen", "Isi sendiri", atau "Kosongkan". Pilihan default-nya "Kosongkan", supaya sistem
+  tidak mengarang isian yang tidak diminta. Tombol "Semua dari dokumen" memilih isi untuk semuanya sekaligus.
+- Kalau halaman sama sekali tidak menandai kolom wajib, semua kolom ditanyakan dulu lewat panel yang sama.
+
+Isi otomatis setelah Next: setelah extension dijalankan sekali di sebuah tab, extension memantau halaman. Begitu
+kamu menekan Next dan muncul kolom kosong baru, extension langsung mengisinya dengan aturan wajib/tidak wajib di atas.
+Ini hanya untuk form yang berganti langkah tanpa reload halaman. Kalau halaman reload ke alamat baru, klik extension
+sekali lagi: extension sengaja hanya memakai izin `activeTab`, yang hilang saat tab pindah alamat, karena izin
+untuk semua website terlalu besar bagi extension yang memegang data pribadi. Fitur ini bisa dimatikan di popup.
+
+Pengalaman kerja dan pengalaman organisasi dipisah. Pertanyaan yang jelas menanyakan salah satunya (mis.
+"Pengalaman kerja / magang" atau "Pengalaman organisasi atau kepanitiaan") dibatasi ke tipe dokumen yang sesuai
+dan diberi instruksi supaya model tidak mencampur keduanya. Dokumen pengalaman kerja selain CV (mis. surat keterangan
+magang) bisa ditaruh di folder `pengalaman/` atau `kerja/`. Form simulasi juga punya isian terpisah untuk keduanya.
+
+Pasang (Chrome atau Edge):
+1. Buka `chrome://extensions` (Edge: `edge://extensions`) dan aktifkan Developer mode.
+2. Klik "Load unpacked" lalu pilih folder `extension/`.
+3. Jalankan `python cli.py serve`. Popup extension menunjukkan apakah server dan model sudah siap.
+
+Demo dengan halaman lamaran fiktif:
+1. Buka `http://127.0.0.1:8000/demo`, isi posisi di popup extension, lalu klik "Isi draf di halaman ini"
+   (atau Alt+Shift+D). Popup boleh ditutup; progres terlihat di banner kanan atas.
+2. Kolom wajib terisi. Pilih apa yang dilakukan untuk "Program studi / jurusan" (tidak wajib) di panel kanan bawah.
+3. Cek isian, lalu tekan "Selanjutnya" sendiri. Langkah 2 terisi otomatis, dan panel menanyakan "Pengalaman kerja /
+   magang" dan "Pengalaman organisasi atau kepanitiaan".
+
+Label di halaman demo sengaja ditulis dengan 6 cara berbeda (`<label for>`, label yang membungkus kolom,
+`aria-labelledby`, teks di atas kolom, placeholder, `aria-label`). Panel "State form" di bawahnya meniru state
+framework seperti React: panel ini hanya berubah lewat event `input`/`change`, jadi terlihat apakah isian dari
+extension benar-benar tercatat oleh halaman.
+
+Hasil tes (22 Okt 2026, model asli, logika `content.js` dan `/api/draft` dijalankan langsung di halaman demo):
+- Langkah 1: keenam label terbaca benar; 6 kolom terisi dalam 52 detik (5 terisi, 1 perlu dicek); semua tercatat di
+  panel state. Kolom langkah 2 yang masih tersembunyi tidak ikut terbaca.
+- Langkah 2: 4 kolom dalam 78 detik. Tiga textarea terisi paragraf (satu ditandai perlu dicek), dropdown kesediaan
+  dibiarkan kosong sebagai "isi sendiri", upload CV tidak disentuh, dan tidak ada tombol yang ditekan.
+- Versi pertama ini (tanpa pembedaan wajib/tidak wajib dan tanpa isi otomatis) sudah dicoba sebagai extension
+  terpasang di Chrome dan berjalan di kedua langkah.
+
+Hasil tes versi dengan kolom wajib/tidak wajib dan isi otomatis (22 Okt 2026, model asli, `content.js` dijalankan di
+halaman demo dengan harness yang meniru `background.js`):
+- Langkah 1: 5 kolom wajib terisi dalam 27 detik; "Program studi / jurusan" (tanpa `*`) masuk panel, dan setelah dipilih
+  "Isi dari dokumen" terisi lewat permintaan terpisah. Tes ini menemukan bug: label berupa teks di atas kolom
+  kehilangan tanda `*` sebelum dicek, sehingga "Asal universitas *" dianggap tidak wajib. Sudah diperbaiki.
+- Setelah "Selanjutnya" ditekan tanpa memanggil extension, kolom baru terdeteksi sekitar 1 detik kemudian dan
+  langkah 2 terisi otomatis (2 kolom wajib terisi dalam 50 detik, kesediaan dibiarkan untuk diisi sendiri). Bug yang
+  ditemukan: pemantau mengabaikan perubahan atribut `hidden` karena `[].every()` selalu bernilai true. Sudah diperbaiki.
+- "Pengalaman kerja / magang" dari dokumen berisi asisten laboratorium dan freelance UMKM, tanpa tercampur
+  organisasi. Kolom organisasi yang dipilih "Isi sendiri" dibiarkan kosong, diberi garis biru, dan langsung difokus.
+- Garis warna dan panel dari extension sendiri tidak memicu deteksi kolom baru.
+- Belum dites sebagai extension terpasang: pesan antara `content.js` dan `background.js` untuk panel pilihan dan isi
+  otomatis, serta toggle di popup. Logikanya sama dengan harness di atas, tetapi lewat `chrome.runtime.sendMessage`.
+
+Keamanan: server tidak mengirim header CORS, jadi website lain yang terbuka di browser tidak bisa membaca jawaban
+dari server lokal. Extension boleh memanggil server karena `host_permissions` hanya untuk `127.0.0.1` dan `localhost`.
+
+Keterbatasan: label ditebak dengan aturan sehingga bisa meleset di form yang strukturnya tidak biasa; radio button,
+checkbox, dan form di dalam iframe (mis. Google Form yang di-embed) belum didukung; dropdown hanya diisi kalau teks
+opsinya cocok dengan jawaban; isi otomatis hanya untuk form tanpa reload; dan penanda wajib dibaca dari tanda `*`
+serta atribut `required`, jadi form yang menandai kolom wajib dengan cara lain (mis. hanya warna) dianggap tidak
+menandai kolom wajib, dan semua kolomnya ditanyakan lewat panel.
 
 ## Konfigurasi
 
@@ -425,10 +503,10 @@ Urutan berdasarkan dampak untuk pemakaian nyata:
 3. Bank jawaban dari `storage/qc_log.jsonl`: jawaban yang sudah di-QC dipakai ulang untuk pertanyaan yang mirip di
    form lain. Ini bisa memotong waktu jawaban dari belasan detik menjadi hampir instan untuk pertanyaan yang
    berulang, dan hasilnya sudah dicek manusia.
-4. Browser extension setengah otomatis: extension membaca label kolom di halaman lamaran, memanggil `/api/draft`,
-   dan mengisi draf per halaman. Pengguna tetap menekan "Next" dan "Submit" sendiri, karena di banyak form
-   menekan "Next" sudah mengirim isian ke server perusahaan. Server lokal harus dibatasi supaya hanya menerima
-   permintaan dari extension itu.
+4. Lanjutan extension (MVP, kolom wajib/tidak wajib, dan isi otomatis untuk form tanpa reload sudah ada): dukungan
+   radio button/checkbox/iframe, isi otomatis untuk form yang reload ke alamat baru (butuh izin yang lebih luas,
+   jadi harus opsional), dan token sederhana antara extension dan server. Pengguna tetap menekan "Next" dan
+   "Submit" sendiri, karena di banyak form menekan "Next" sudah mengirim isian ke server perusahaan.
 5. Jalankan model embedding di CPU supaya LLM mendapat seluruh VRAM (`ollama ps`: 34% LLM ada di CPU), lalu
    ukur pengaruhnya ke waktu jawaban dan kualitas retrieval.
 6. Ingatan percakapan di mode chat untuk pertanyaan lanjutan.
