@@ -319,6 +319,9 @@ Cara kerjanya:
 - Pengalaman kerja dan pengalaman organisasi dipisah. Pertanyaan yang jelas menanyakan salah satunya dibatasi ke
   tipe dokumen yang sesuai dan diberi instruksi supaya model tidak mencampur keduanya. Dokumen pengalaman kerja
   selain CV (mis. surat keterangan magang) bisa ditaruh di folder `pengalaman/` atau `kerja/`.
+- Kolom di dalam komponen web juga terbaca, misalnya `<spl-input>` di SmartRecruiters yang menyimpan `<input>`
+  aslinya di shadow root. Label dicari di shadow root yang sama, dan event `input`/`change` dikirim dengan
+  `composed: true` supaya framework halaman ikut mencatat isiannya.
 
 ```mermaid
 flowchart TD
@@ -374,6 +377,11 @@ Hasil uji di halaman demo (22 Okt 2026, model asli):
 - Versi pertama (tanpa pembedaan wajib/tidak wajib) sudah dicoba sebagai extension terpasang di Chrome pada kedua
   langkah. Di versi sekarang, panel pilihan sudah terlihat berjalan saat terpasang; isi otomatis setelah Next baru
   dites dengan harness yang meniru `background.js`.
+
+Uji di form asli (27 Okt 2026): di halaman Easy Apply SmartRecruiters, extension awalnya menampilkan "Tidak ada
+kolom kosong" karena semua `<input>` ada di shadow root. Setelah dukungan shadow root ditambahkan, 11 kolom terbaca
+dengan label dan tanda wajib yang benar. Pengisiannya dicek di halaman uji lokal yang meniru komponen tersebut,
+termasuk komponen di dalam komponen lain. Halaman `/demo` juga dicek ulang dan hasilnya tetap sama.
 
 Keamanan: server tidak mengirim header CORS, jadi website lain yang terbuka di browser tidak bisa membaca jawaban
 dari server lokal. Extension boleh memanggil server karena `host_permissions` hanya untuk `127.0.0.1` dan
@@ -589,14 +597,6 @@ Dari uji mode tempel pertanyaan dan form simulasi dengan model asli:
   Nusantara Digital, 3,62". Dugaan penyebab: petunjuk "daftar dipisah koma" di prompt jawaban singkat. Prompt belum
   diubah karena hasil evaluasi di atas terikat pada prompt yang sekarang.
 
-## Keputusan desain
-
-- Chunking mengikuti tipe dokumen. CV dan laporan project punya heading yang jelas, jadi dipotong per section.
-  Sertifikat pendek, jadi satu dokumen menjadi satu chunk. Judul dokumen dan nama section ikut di-index.
-- Chunk tidak pernah menyeberang halaman, supaya nomor halaman di sitasi tepat.
-- Isian tetap (nama, email, HP) diambil dengan regex, bukan LLM: lebih cepat, hasilnya selalu sama, dan tidak
-  bisa berhalusinasi.
-- Pertanyaan kesediaan, gaji, dan jadwal tidak dikirim ke LLM, karena jawabannya tidak ada di dokumen mana pun.
 Dari uji dengan dokumen asli saya (27 Okt 2026: CV dan project berbahasa Inggris, 15 dokumen, 70 chunk; tidak
 masuk angka evaluasi mana pun):
 
@@ -608,6 +608,14 @@ masuk angka evaluasi mana pun):
 - "IPK terakhir" dijawab dengan IPS semester terakhir, bukan IPK kumulatif, dan statusnya tetap `ok`. Sekarang
   pertanyaan IPK diberi penegasan "IPK kumulatif, bukan IPS per semester", dan jawabannya benar.
 
+## Keputusan desain
+
+- Chunking mengikuti tipe dokumen. CV dan laporan project punya heading yang jelas, jadi dipotong per section.
+  Sertifikat pendek, jadi satu dokumen menjadi satu chunk. Judul dokumen dan nama section ikut di-index.
+- Chunk tidak pernah menyeberang halaman, supaya nomor halaman di sitasi tepat.
+- Isian tetap (nama, email, HP) diambil dengan regex, bukan LLM: lebih cepat, hasilnya selalu sama, dan tidak
+  bisa berhalusinasi.
+- Pertanyaan kesediaan, gaji, dan jadwal tidak dikirim ke LLM, karena jawabannya tidak ada di dokumen mana pun.
 - Jenis pertanyaan ditebak dengan aturan, bukan LLM, supaya cepat dan bisa ditelusuri.
 - LLM wajib menyebut `chunk_id` sumbernya. Sumber yang tidak ada di hasil retrieve ditandai `sumber_tidak_valid`.
 - Dukungan sumber dicek secara heuristik: jawaban dibandingkan dengan teks sumber (substring / overlap token), dan
@@ -635,17 +643,19 @@ Pipeline:
 - Jawaban singkat kadang menambahkan informasi yang tidak ditanya.
 - Retrieval butuh 2-3,5 detik, dan 34% LLM masih berjalan di CPU.
 - Jenis pertanyaan di mode tempel ditebak dengan pola kata, jadi bisa salah untuk kalimat yang tidak biasa.
+- "Domisili" dibaca sebagai alamat lengkap. Kalau form hanya menanyakan kota, isiannya perlu dipendekkan sendiri.
+- Dokumen berbahasa Inggris dengan pertanyaan berbahasa Indonesia: BM25 tidak bisa mencocokkan kata lintas bahasa,
+  jadi retrieval hanya bergantung pada vektor untuk dokumen seperti itu.
 - Chat belum punya ingatan percakapan; pertanyaan lanjutan seperti "yang kedua tadi apa?" tidak bisa dijawab.
 
 Extension:
 
 - Label ditebak dengan aturan, jadi bisa meleset di form yang strukturnya tidak biasa.
 - Radio button, checkbox, dan form di dalam iframe (mis. Google Form yang di-embed) belum didukung.
+- Shadow root tertutup (`mode: "closed"`) tidak bisa dibaca dari luar. Pemantau Next juga hanya melihat perubahan
+  di luar shadow root, jadi form yang berganti langkah seluruhnya di dalam komponen web perlu diklik ulang.
 - Dropdown hanya diisi kalau teks opsinya cocok dengan jawaban.
 - Isi otomatis setelah Next hanya untuk form tanpa reload.
-- "Domisili" dibaca sebagai alamat lengkap. Kalau form hanya menanyakan kota, isiannya perlu dipendekkan sendiri.
-- Dokumen berbahasa Inggris dengan pertanyaan berbahasa Indonesia: BM25 tidak bisa mencocokkan kata lintas bahasa,
-  jadi retrieval hanya bergantung pada vektor untuk dokumen seperti itu.
 - Penanda wajib dibaca dari tanda `*` dan atribut `required`. Form yang menandai kolom wajib dengan cara lain
   (mis. hanya warna) dianggap tidak menandai kolom wajib, jadi semua kolomnya ditanyakan lewat panel.
 

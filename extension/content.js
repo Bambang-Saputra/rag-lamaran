@@ -19,16 +19,28 @@
     return copy.textContent;
   };
 
+  // Banyak form memakai komponen web (mis. <spl-input> di SmartRecruiters) yang menyimpan <input> aslinya di
+  // shadow root. querySelectorAll biasa tidak masuk ke sana, jadi setiap shadow root yang terbuka ikut ditelusuri.
+  function deepQueryAll(root, selector, out = []) {
+    for (const el of root.querySelectorAll("*")) {
+      if (el.matches(selector)) out.push(el);
+      if (el.shadowRoot) deepQueryAll(el.shadowRoot, selector, out);
+    }
+    return out;
+  }
+
   function labelFor(el) {
+    // Label kolom di dalam komponen web ada di shadow root yang sama, bukan di document.
+    const root = el.getRootNode();
     if (el.id) {
-      const l = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+      const l = root.querySelector(`label[for="${CSS.escape(el.id)}"]`);
       if (l && clean(l.textContent)) return l.textContent;
     }
     const wrap = el.closest("label");
     if (wrap && clean(textWithoutFields(wrap))) return textWithoutFields(wrap);
     const by = el.getAttribute("aria-labelledby");
     if (by) {
-      const t = by.split(/\s+/).map((id) => document.getElementById(id)?.textContent || "").join(" ");
+      const t = by.split(/\s+/).map((id) => root.getElementById(id)?.textContent || "").join(" ");
       if (clean(t)) return t;
     }
     if (el.getAttribute("aria-label")) return el.getAttribute("aria-label");
@@ -51,7 +63,7 @@
   // Kolom yang bisa diisi di halaman ini (terlihat, aktif, bukan UI extension).
   function candidates() {
     const out = [];
-    document.querySelectorAll("input, textarea, select").forEach((el) => {
+    deepQueryAll(document, "input, textarea, select").forEach((el) => {
       const type = (el.getAttribute("type") || "").toLowerCase();
       if (SKIP_TYPES.has(type) || el.disabled || el.readOnly || !visible(el) || el.closest(OWN_UI)) return;
       out.push(el);
@@ -60,7 +72,9 @@
   }
 
   // Kolom kosong yang belum pernah diproses. pageMarksRequired: apakah halaman ini memakai penanda wajib sama sekali.
+  // Elemen disimpan per key karena kolom di shadow root tidak bisa dicari ulang lewat document.querySelector.
   let counter = 0;
+  const byKey = new Map();
   function collect() {
     const fields = [];
     let pageMarksRequired = false;
@@ -72,18 +86,20 @@
       const label = clean(raw);
       if (!label) continue;
       el.dataset.ragKey = el.dataset.ragKey || `f${counter++}`;
+      byKey.set(el.dataset.ragKey, el);
       fields.push({ key: el.dataset.ragKey, label, tag: el.tagName.toLowerCase(), required });
     }
     return { fields, pageMarksRequired };
   }
 
   // Set value lewat setter bawaan lalu kirim event input/change, supaya framework (React, Vue) ikut mencatat.
+  // composed: true supaya event dari kolom di shadow root juga sampai ke komponen pembungkusnya (mis. Angular).
   function setValue(el, value) {
     const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype
       : el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
     Object.getOwnPropertyDescriptor(proto, "value").set.call(el, value);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    el.dispatchEvent(new Event("change", { bubbles: true }));
+    el.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
   }
 
   // Dropdown: pilih opsi yang teksnya sama dengan jawaban (atau saling memuat). Kalau tidak ada, biarkan kosong.
@@ -94,7 +110,8 @@
       || opts.find((o) => a.includes(o.text.toLowerCase().trim()) || o.text.toLowerCase().includes(a));
   }
 
-  const fieldEl = (key) => document.querySelector(`[data-rag-key="${key}"]`);
+  // Kolom yang sudah dihapus halaman (mis. dirender ulang) dianggap tidak ada.
+  const fieldEl = (key) => (byKey.get(key)?.isConnected ? byKey.get(key) : null);
 
   function mark(el, status, tooltip, dashed = false) {
     el.style.outline = `2px ${dashed ? "dashed" : "solid"} ${COLORS[status] || COLORS.not_found}`;
