@@ -42,7 +42,11 @@ def _rag_answer(field: dict, index: Index, position: str, job_description: str, 
     retrieval_query = question
     task_context = ""
     if field["kind"] == "open" and position:
-        retrieval_query = f"{question} {position}"
+        # Posisi tidak ditambahkan ke query untuk pertanyaan organisasi: "Data Analyst" di query menarik section
+        # Skills dan Education, sehingga section organisasi di CV terdorong keluar dari top-k. Untuk pengalaman
+        # kerja posisi tetap ditambahkan: tanpa posisi, CV tanpa pengalaman kerja malah dijawab dengan organisasi.
+        if field.get("use_position", True):
+            retrieval_query = f"{question} {position}"
         task_context = f"Posisi: {position}\n{job_description[:1500]}".strip()
     return answer(question, index, doc_types=field.get("doc_types"),
                   style="short" if field["kind"] == "factual" else "long",
@@ -101,6 +105,16 @@ FIXED_KEYWORDS = [
     ("telepon", re.compile(PHONE_Q)),
     ("linkedin", re.compile(r"\blinkedin\b")),
     ("github", re.compile(r"\bgithub\b")),
+    # Hanya label pendek seperti "Website", "Portfolio", atau "Link portofolio". Pertanyaan seperti "Ceritakan
+    # project di portofolio kamu" tetap dijawab lewat RAG.
+    ("website", re.compile(r"^(personal |portfolio |portofolio )?(website|situs web)\b|\bwebsite (pribadi|portofolio"
+                           r"|portfolio)\b|\b(link|url|tautan|alamat) (website|situs|portofolio|portfolio)\b"
+                           r"|^(portfolio|portofolio)\W*$")),
+    # Setelah email/LinkedIn/GitHub/website, supaya "Alamat email" tetap dibaca sebagai email.
+    ("alamat", re.compile(r"\balamat\b|\bdomisili\b|tempat tinggal|\baddress\b")),
+    # Form luar negeri (mis. SmartRecruiters) memisahkan First name dan Last name.
+    ("nama_depan", re.compile(r"\bfirst name\b|\bgiven name\b|\bforename\b|\bnama depan\b")),
+    ("nama_belakang", re.compile(r"\blast name\b|\bfamily name\b|\bsurname\b|\bnama (belakang|keluarga)\b")),
     ("nama", re.compile(r"^nama(\s+lengkap)?\W*$|\bnama lengkap\b|^full name\b")),
 ]
 FORMAT_KEYWORDS = [("ipk", re.compile(r"\b(ipk|gpa)\b")), ("email", re.compile(r"\be-?mail\b")),
@@ -157,11 +171,16 @@ def classify_question(question: str) -> dict:
     fmt = next((name for name, pattern in FORMAT_KEYWORDS if pattern.search(q)), None)
     if fmt:
         field["format"] = fmt
+    if fmt == "ipk":
+        # "IPK terakhir" pernah dijawab dengan IPS semester terakhir, bukan IPK kumulatif, dan statusnya tetap ok.
+        field["question"] = f"{question} Yang dimaksud IPK kumulatif, bukan IPS per semester."
     org, work = bool(ORG_HINTS.search(q)), bool(WORK_HINTS.search(q))
     if org != work:  # kalau dua-duanya disebut, jangan dibatasi
         doc_types, focus = EXPERIENCE_FOCUS["organisasi" if org else "kerja"]
         field["doc_types"] = doc_types
         field["question"] = f"{question} {focus}"
+        if org:
+            field["use_position"] = False
     return field
 
 

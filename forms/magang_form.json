@@ -4,6 +4,7 @@
     {"name": "nama", "label": "Nama lengkap", "kind": "fixed"},
     {"name": "email", "label": "Email", "kind": "fixed", "format": "email"},
     {"name": "telepon", "label": "Nomor HP", "kind": "fixed", "format": "telepon"},
+    {"name": "alamat", "label": "Alamat tempat tinggal", "kind": "fixed"},
     {"name": "linkedin", "label": "URL LinkedIn", "kind": "fixed"},
     {"name": "github", "label": "URL GitHub", "kind": "fixed"},
 
@@ -28,7 +29,7 @@
      "doc_types": ["cv", "pengalaman", "kerja"]},
     {"name": "pengalaman_organisasi", "label": "Pengalaman organisasi", "kind": "open",
      "question": "Ceritakan pengalaman organisasi saya dan peran saya di sana. Bahas hanya pengalaman organisasi atau kepanitiaan, bukan pengalaman kerja.",
-     "doc_types": ["organisasi", "kepanitiaan", "cv"]},
+     "doc_types": ["organisasi", "kepanitiaan", "cv"], "use_position": false},
     {"name": "motivasi", "label": "Kenapa tertarik dengan posisi ini?", "kind": "open",
      "question": "Kenapa saya tertarik dengan posisi ini?",
      "doc_types": ["esai"]}

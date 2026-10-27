@@ -105,7 +105,7 @@
 
   function describe(r) {
     const parts = [`RAG Lamaran: ${STATUS_LABEL[r.status] || r.status}`];
-    const src = [...new Set((r.sources || []).map((s) => `${s.file} hlm ${s.page}`))].join(", ");
+    const src = [...new Set((r.sources || []).map((s) => (s.page ? `${s.file} hlm ${s.page}` : s.file)))].join(", ");
     if (src) parts.push(`Sumber: ${src}`);
     if (r.flags && r.flags.length) parts.push(`Flags: ${r.flags.join(", ")}`);
     return parts.join("\n");

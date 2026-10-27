@@ -96,7 +96,54 @@ def test_profile_regex():
     assert PROFILE["nama"]["value"] == "Raka Pratama"
     assert PROFILE["email"]["value"] == "raka.pratama@example.com"
     assert PROFILE["telepon"]["value"].startswith("0812")
+    from rag.profile import PHONE_RE
+    for phone in ["(+62) 812-3456-7890", "+62 812 3456 7890", "+6281234567890", "0812-3456-7890"]:
+        assert PHONE_RE.search(f"Email: a@b.com | {phone} | Bandung").group(0) == phone, phone
     assert "linkedin.com/in/raka-pratama-dummy" in PROFILE["linkedin"]["value"]
+    # Alamat tidak ada di CV, jadi diambil dari data/dummy/profil.json (dan file itu tidak ikut di-index).
+    assert PROFILE["alamat"]["value"].startswith("Jl. Contoh Raya")
+    assert PROFILE["alamat"]["source"] == {"file": "profil.json", "page": None, "method": "diisi manual"}
+    assert META["profile_fields"]["alamat"] == "profil.json" and META["n_docs"] == 10
+    assert PROFILE["nama_depan"]["value"] == "Raka" and PROFILE["nama_belakang"]["value"] == "Pratama"
+    assert PROFILE["nama_belakang"]["source"]["page"] == PROFILE["nama"]["source"]["page"]
+    assert PROFILE["website"]["value"] == "https://raka-pratama.example.com"
+    assert PROFILE["website"]["source"]["file"] == "profil.json"
+
+
+def test_name_parts():
+    from rag.profile import add_name_parts, split_name
+    assert split_name("Raka Adi Pratama") == ("Raka Adi", "Pratama")
+    assert split_name("Sukarno") == ("Sukarno", "")
+    src = {"file": "cv/cv.pdf", "page": 1, "method": "baris nama di awal CV"}
+    profile = {"nama": {"value": "Sukarno", "source": src}}
+    add_name_parts(profile)
+    assert profile["nama_depan"]["value"] == "Sukarno" and "nama_belakang" not in profile  # diisi sendiri
+    # Pembagian dari profil.json tidak ditimpa, dan bagian lainnya tidak ditebak.
+    profile = {"nama": {"value": "Raka Adi Pratama", "source": src},
+               "nama_depan": {"value": "Raka", "source": {"file": "profil.json", "page": None}}}
+    add_name_parts(profile)
+    assert profile["nama_depan"]["value"] == "Raka" and "nama_belakang" not in profile
+
+
+def test_manual_profile_overrides_cv():
+    from rag.profile import extract_profile, load_manual_profile
+    from rag.loaders import Document
+    cv = Document("cv/cv", "cv/cv.md", "cv", "CV", ["Budi Santoso\nbudi@example.com\n0812-1111-2222"])
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "profil.json")
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump({"_catatan": "x", "telepon": "0813-9999-0000", "alamat": "Jl. Uji 1", "github": "  ",
+                       "umur": 21}, fh)
+        manual, warnings = load_manual_profile(__import__("pathlib").Path(d))
+        profile = {**extract_profile([cv]), **manual}
+        assert profile["telepon"]["value"] == "0813-9999-0000"  # yang diisi sendiri menang atas CV
+        assert profile["email"]["value"] == "budi@example.com" and profile["alamat"]["value"] == "Jl. Uji 1"
+        assert "_catatan" not in manual and "github" not in manual  # catatan dan nilai kosong dilewati
+        assert warnings == ["profil.json: nilai 'umur' harus teks. Dilewati."]
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("{bukan json")
+        manual, warnings = load_manual_profile(__import__("pathlib").Path(d))
+        assert manual == {} and "bukan JSON yang valid" in warnings[0]
 
 
 def test_extract_name_variants():
@@ -232,6 +279,7 @@ def test_autofill_routes_fields():
     assert "judge" in calls and calls.index("judge") > max(i for i, c in enumerate(calls) if c == "gen")
     assert list(res) == [f["name"] for f in form["fields"]]
     assert res["email"]["status"] == "ok" and res["email"]["sources"][0]["method"] == "regex"
+    assert res["alamat"]["status"] == "ok" and res["alamat"]["sources"][0]["method"] == "diisi manual"
     assert "retrieved" not in res["nama"] and "retrieved" in res["sertifikasi_relevan"]
     for r in res.values():
         assert r["status"] in {"ok", "needs_review", "not_found"}
@@ -341,11 +389,22 @@ def test_parse_and_classify_questions():
     kinds = {q: classify_question(q) for q in qs}
     assert kinds["Nama lengkap"]["kind"] == "fixed" and kinds["Nama lengkap"]["profile_key"] == "nama"
     assert kinds["Email"]["profile_key"] == "email"
-    assert kinds["Berapa IPK terakhir Anda?"] == {"question": "Berapa IPK terakhir Anda?", "kind": "factual",
-                                                  "format": "ipk"}
+    assert kinds["Berapa IPK terakhir Anda?"] == {
+        "question": "Berapa IPK terakhir Anda? Yang dimaksud IPK kumulatif, bukan IPS per semester.",
+        "kind": "factual", "format": "ipk"}
     assert kinds["Nama universitas"]["kind"] == "factual"  # bukan nama pelamar
     assert kinds["Ceritakan pengalaman organisasi Anda"]["kind"] == "open"
     assert classify_question("Nomor HP / WhatsApp aktif")["profile_key"] == "telepon"
+    assert classify_question("Alamat tempat tinggal saat ini")["profile_key"] == "alamat"
+    assert classify_question("Domisili")["profile_key"] == "alamat"
+    assert classify_question("Alamat email")["profile_key"] == "email"  # bukan alamat rumah
+    for q, key in [("First name", "nama_depan"), ("Nama depan", "nama_depan"), ("Last name", "nama_belakang"),
+                   ("Surname", "nama_belakang"), ("Nama keluarga", "nama_belakang"), ("Full name", "nama"),
+                   ("Confirm your email", "email"), ("Website", "website"), ("Personal website", "website"),
+                   ("Website portofolio", "website"), ("Link portofolio", "website"), ("Portfolio", "website"),
+                   ("Alamat website pribadi", "website"), ("Alamat tempat tinggal", "alamat")]:
+        assert classify_question(q)["profile_key"] == key, q
+    assert classify_question("Ceritakan project di portofolio kamu")["kind"] == "open"  # bukan link
     assert classify_question("Apakah kamu bersedia magang onsite di Jakarta?")["kind"] == "manual"
     assert classify_question("Berapa ekspektasi gaji Anda?")["kind"] == "manual"
     try:
@@ -372,6 +431,9 @@ def test_draft_answers_for_pasted_questions():
     assert [r["id"] for r in res] == ["q1", "q2", "q3", "q4"]
     assert [r["kind"] for r in res] == ["fixed", "factual", "open", "manual"]
     assert res[0]["value"] == "raka.pratama@example.com" and res[0]["status"] == "ok"
+    first, last, web = draft_answers(["First name", "Last name", "Website"], INDEX, PROFILE)
+    assert (first["value"], last["value"]) == ("Raka", "Pratama") and first["status"] == last["status"] == "ok"
+    assert web["value"] == "https://raka-pratama.example.com" and web["kind"] == "fixed"
     assert res[2]["sources"] and res[2]["question"] == "Ceritakan project yang relevan"
     # Pertanyaan kesediaan tidak dijawab dan tidak dikirim ke LLM.
     assert res[3]["status"] == "not_found" and res[3]["flags"] == ["isi_sendiri"]
@@ -408,6 +470,23 @@ def test_work_and_organization_experience_are_separated():
     assert "doc_types" not in classify_question("Ceritakan pengalaman kerja dan organisasi kamu")
     names = [f["name"] for f in load_form()["fields"]]
     assert "pengalaman_kerja" in names and "pengalaman_organisasi" in names
+    assert org["use_position"] is False and "use_position" not in work
+
+    # Posisi ikut di query untuk project, tapi tidak untuk organisasi (posisinya tetap masuk INFO POSISI).
+    import rag.autofill as af
+    seen = {}
+    orig = af.answer
+    af.answer = lambda q, index, **kw: seen.setdefault(q, kw) and orig(q, index, **kw)
+    try:
+        af.autofill({"fields": [{"name": "o", "label": "O", "kind": "open", "question": "Ceritakan organisasi",
+                                 "use_position": False},
+                                {"name": "p", "label": "P", "kind": "open", "question": "Ceritakan project"}]},
+                    INDEX, PROFILE, position="Data Analyst Intern")
+    finally:
+        af.answer = orig
+    assert seen["Ceritakan organisasi"]["retrieval_query"] == "Ceritakan organisasi"
+    assert "Data Analyst Intern" in seen["Ceritakan organisasi"]["task_context"]
+    assert seen["Ceritakan project"]["retrieval_query"] == "Ceritakan project Data Analyst Intern"
 
 
 def test_long_questions_become_paragraph_answers():

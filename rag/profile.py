@@ -1,12 +1,16 @@
-"""Isian tetap (nama, email, HP, LinkedIn, GitHub) diambil dari CV dengan regex, tanpa LLM."""
+"""Isian tetap (nama, nama depan/belakang, email, HP, LinkedIn, GitHub, website, alamat) tanpa LLM: dari CV dengan
+regex, ditambah file `profil.json` opsional untuk isian yang tidak ada (atau tidak tepat) di CV."""
 from __future__ import annotations
 
+import json
 import re
+from pathlib import Path
 
 from .loaders import Document
 
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
-PHONE_RE = re.compile(r"(?:\+62|62|0)8\d{1,3}[\s.-]?\d{3,4}[\s.-]?\d{3,5}")
+# Termasuk format "(+62) 812-..." dan "+62 812-...", yang sering dipakai di CV.
+PHONE_RE = re.compile(r"(?:\(\+?62\)[\s.-]?|\+62[\s.-]?|62|0)8\d{1,3}[\s.-]?\d{3,4}[\s.-]?\d{3,5}")
 LINKEDIN_RE = re.compile(r"(?:https?://)?(?:www\.)?linkedin\.com/in/[\w-]+/?", re.I)
 GITHUB_RE = re.compile(r"(?:https?://)?(?:www\.)?github\.com/[\w-]+/?", re.I)
 
@@ -49,6 +53,28 @@ def extract_name(text: str) -> tuple[str, str] | None:
     return None
 
 
+def split_name(name: str) -> tuple[str, str]:
+    """Pisahkan nama untuk form yang meminta First name / Last name: kata terakhir jadi nama belakang, sisanya
+    nama depan ("Raka Adi Pratama" -> "Raka Adi", "Pratama"). Nama satu kata tidak punya nama
+    belakang."""
+    words = name.split()
+    if len(words) < 2:
+        return name.strip(), ""
+    return " ".join(words[:-1]), words[-1]
+
+
+def add_name_parts(profile: dict) -> None:
+    """Tambahkan nama_depan dan nama_belakang dari nama lengkap. Kalau salah satunya sudah diisi di profil.json,
+    tidak ada yang diturunkan, supaya pembagian manual tidak tercampur dengan hasil tebakan."""
+    if "nama" not in profile or "nama_depan" in profile or "nama_belakang" in profile:
+        return
+    first, last = split_name(profile["nama"]["value"])
+    source = {**profile["nama"]["source"], "method": "dari nama lengkap (kata terakhir = nama belakang)"}
+    for key, value in (("nama_depan", first), ("nama_belakang", last)):
+        if value:
+            profile[key] = {"value": value, "source": dict(source)}
+
+
 def extract_profile(docs: list[Document]) -> dict:
     cvs = [d for d in docs if d.doc_type == "cv"]
     if not cvs:
@@ -67,3 +93,30 @@ def extract_profile(docs: list[Document]) -> dict:
                 profile[key] = {"value": m.group(0).strip(),
                                 "source": {"file": cv.file, "page": page_no, "method": "regex"}}
     return profile
+
+
+# File di akar DATA_DIR (bukan di subfolder tipe dokumen, jadi tidak ikut di-index). Isinya objek JSON, mis.
+# {"alamat": "Jl. ...", "telepon": "0812..."}. Nilainya menang atas hasil regex dari CV, karena diisi sendiri.
+# Kunci yang diawali "_" dianggap catatan.
+MANUAL_FILE = "profil.json"
+
+
+def load_manual_profile(data_dir: Path) -> tuple[dict, list[str]]:
+    path = data_dir / MANUAL_FILE
+    if not path.exists():
+        return {}, []
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        return {}, [f"{MANUAL_FILE}: bukan JSON yang valid ({e}). Dilewati."]
+    if not isinstance(raw, dict):
+        return {}, [f"{MANUAL_FILE}: isinya harus objek JSON, mis. {{\"alamat\": \"...\"}}. Dilewati."]
+    profile, warnings = {}, []
+    for key, value in raw.items():
+        if key.startswith("_"):
+            continue
+        if not isinstance(value, str):
+            warnings.append(f"{MANUAL_FILE}: nilai '{key}' harus teks. Dilewati.")
+        elif value.strip():
+            profile[key] = {"value": value.strip(), "source": {"file": MANUAL_FILE, "page": None, "method": "diisi manual"}}
+    return profile, warnings

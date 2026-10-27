@@ -62,6 +62,36 @@ Evaluasi, contoh output, dan demo memakai data dummy. Pipeline juga menerima PDF
 PDF assessment 13 halaman, dan nomor halaman di sitasinya sesuai. Dokumen asli saya tidak dipakai di angka mana
 pun dan tidak ada di repo.
 
+Isian tetap yang tidak ada di CV, atau yang mau saya tentukan sendiri (mis. alamat domisili), ditulis di
+`profil.json` di akar folder data:
+
+```json
+{"alamat": "Jl. ...", "telepon": "0812..."}
+```
+
+Kunci yang dipakai: `nama`, `nama_depan`, `nama_belakang`, `email`, `telepon`, `linkedin`, `github`, `website`,
+`alamat`. Nilainya menang atas hasil regex dari CV, dan file ini tidak ikut di-index. Contohnya ada di
+[`data/dummy/profil.json`](data/dummy/profil.json) (alamat dan website fiktif). Versi `data/private/` tidak pernah
+di-commit.
+
+`website` dipakai untuk kolom seperti "Website", "Personal website", "Portfolio", atau "Link portofolio".
+Pertanyaan yang hanya menyebut portofolio, misalnya "Ceritakan project di portofolio kamu", tetap dijawab lewat RAG.
+
+Untuk form yang memisahkan First name dan Last name, `nama_depan` dan `nama_belakang` diturunkan dari nama
+lengkap: kata terakhir jadi nama belakang, sisanya nama depan ("Raka Adi Pratama" jadi "Raka Adi" dan
+"Pratama"). Kalau pembagian itu tidak cocok, isi keduanya di `profil.json`.
+
+### Memakai dokumen asli
+
+1. Salin dokumen ke `data/private/<tipe>/`: `cv`, `transkrip`, `sertifikat`, `project`, `organisasi`, `esai`,
+   dan `pengalaman` (mis. surat keterangan magang). PDF harus berisi teks, bukan hasil scan.
+2. Isi `data/private/profil.json` untuk alamat dan isian lain yang tidak ada atau tidak tepat di CV.
+3. Di `.env`, ganti `DATA_DIR=data/private` dan `STORAGE_DIR=storage/private`. Index data dummy di `storage/`
+   tetap utuh, jadi untuk kembali ke data dummy cukup kembalikan dua baris ini.
+4. Jalankan `python cli.py ingest`. Cek baris "Isian profil" dan peringatan di output-nya, lalu cek hasil
+   ekstraksi dengan `python cli.py chunks --type cv`.
+5. Jalankan (atau restart) `python cli.py serve`.
+
 ## Arsitektur
 
 ### Fase 1: indexing
@@ -74,6 +104,7 @@ flowchart LR
     A["Dokumen<br/>PDF, MD, TXT<br/>folder = tipe dokumen"] --> B["loaders.py<br/>teks per halaman"]
     B --> C["chunking.py<br/>potong sesuai tipe dokumen"]
     B --> P["profile.py<br/>nama, email, HP dengan regex"]
+    MF["profil.json<br/>isian manual, mis. alamat"] --> P
     C --> E["embeddings.py<br/>vektor tiap chunk"]
     C --> S1[("storage/chunks.jsonl")]
     E --> S2[("storage/vectors.npy")]
@@ -90,7 +121,7 @@ aturan (`classify_question` di `rag/autofill.py`) untuk pertanyaan yang ditempel
 ```mermaid
 flowchart TD
     Q["Kolom form atau pertanyaan"] --> K{"Jenis isian?"}
-    K -->|"fixed: nama, email, HP"| F["Ambil dari profile.json"]
+    K -->|"fixed: nama, email, HP, alamat"| F["Ambil dari profile.json"]
     K -->|"manual: bersedia, gaji, jadwal"| M["Dikosongkan<br/>flag isi_sendiri"]
     K -->|"factual: jawaban singkat"| R["answer() lewat RAG<br/>lihat diagram berikutnya"]
     K -->|"open: jawaban paragraf"| R
@@ -140,7 +171,7 @@ retrieval hanya memanggil `retrieve.py` tanpa LLM, dan tes offline mengganti emb
 |---|---|
 | `rag/loaders.py` | Ekstraksi teks per halaman dari PDF/MD/TXT |
 | `rag/chunking.py` | Strategi chunking per tipe dokumen; chunk tidak menyeberang halaman |
-| `rag/profile.py` | Nama, email, HP, LinkedIn, GitHub dengan regex. Judul seperti "Curriculum Vitae" dilewati saat mencari nama |
+| `rag/profile.py` | Nama, email, HP, LinkedIn, GitHub dengan regex. Judul seperti "Curriculum Vitae" dilewati saat mencari nama. Isian dari `profil.json` (mis. alamat, website) menimpa hasil regex. Nama depan dan belakang diturunkan dari nama lengkap |
 | `rag/bm25.py`, `rag/embeddings.py`, `rag/index.py` | Index keyword dan vektor |
 | `rag/retrieve.py` | Hybrid retrieval dengan Reciprocal Rank Fusion |
 | `rag/prompts.py`, `rag/llm.py` | Prompt, format konteks, panggilan LLM dengan output JSON |
@@ -566,6 +597,17 @@ Dari uji mode tempel pertanyaan dan form simulasi dengan model asli:
 - Isian tetap (nama, email, HP) diambil dengan regex, bukan LLM: lebih cepat, hasilnya selalu sama, dan tidak
   bisa berhalusinasi.
 - Pertanyaan kesediaan, gaji, dan jadwal tidak dikirim ke LLM, karena jawabannya tidak ada di dokumen mana pun.
+Dari uji dengan dokumen asli saya (27 Okt 2026: CV dan project berbahasa Inggris, 15 dokumen, 70 chunk; tidak
+masuk angka evaluasi mana pun):
+
+- Section organisasi di CV tidak masuk top-5 untuk "Pengalaman organisasi". Posisi yang ditambahkan ke query
+  ("Data Analyst Intern") menarik section Skills dan Education, dan BM25 tidak bisa mencocokkan "organisasi" dengan
+  "Organizational". Sekarang posisi tidak ditambahkan ke query untuk pertanyaan organisasi, dan section itu masuk.
+- Tanpa posisi di query, "Pengalaman kerja" untuk CV tanpa pengalaman kerja malah diisi pengalaman organisasi
+  (ditandai perlu dicek). Karena itu posisi tetap ditambahkan untuk pertanyaan pengalaman kerja.
+- "IPK terakhir" dijawab dengan IPS semester terakhir, bukan IPK kumulatif, dan statusnya tetap `ok`. Sekarang
+  pertanyaan IPK diberi penegasan "IPK kumulatif, bukan IPS per semester", dan jawabannya benar.
+
 - Jenis pertanyaan ditebak dengan aturan, bukan LLM, supaya cepat dan bisa ditelusuri.
 - LLM wajib menyebut `chunk_id` sumbernya. Sumber yang tidak ada di hasil retrieve ditandai `sumber_tidak_valid`.
 - Dukungan sumber dicek secara heuristik: jawaban dibandingkan dengan teks sumber (substring / overlap token), dan
@@ -601,6 +643,9 @@ Extension:
 - Radio button, checkbox, dan form di dalam iframe (mis. Google Form yang di-embed) belum didukung.
 - Dropdown hanya diisi kalau teks opsinya cocok dengan jawaban.
 - Isi otomatis setelah Next hanya untuk form tanpa reload.
+- "Domisili" dibaca sebagai alamat lengkap. Kalau form hanya menanyakan kota, isiannya perlu dipendekkan sendiri.
+- Dokumen berbahasa Inggris dengan pertanyaan berbahasa Indonesia: BM25 tidak bisa mencocokkan kata lintas bahasa,
+  jadi retrieval hanya bergantung pada vektor untuk dokumen seperti itu.
 - Penanda wajib dibaca dari tanda `*` dan atribut `required`. Form yang menandai kolom wajib dengan cara lain
   (mis. hanya warna) dianggap tidak menandai kolom wajib, jadi semua kolomnya ditanyakan lewat panel.
 

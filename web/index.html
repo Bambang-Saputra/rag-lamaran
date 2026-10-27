@@ -171,7 +171,8 @@ function renderMeta(meta, r, extra) {
   meta.append(el("span", `badge ${r.status}`, STATUS_LABEL[r.status] || r.status));
   if (extra) meta.append(extra);
   for (const s of r.sources || []) {
-    const btn = el("button", "src", s.chunk_id ? `${s.file} hlm ${s.page}` : `${s.file} hlm ${s.page} (${s.method})`);
+    const where = s.page ? `${s.file} hlm ${s.page}` : s.file;  // profil.json tidak punya halaman
+    const btn = el("button", "src", s.chunk_id ? where : `${where} (${s.method})`);
     btn.type = "button";
     if (s.chunk_id) btn.onclick = () => showChunk(s.chunk_id);
     meta.append(btn);

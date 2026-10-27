@@ -17,7 +17,7 @@ from .bm25 import BM25
 from .chunking import Chunk, chunk_documents
 from .config import Settings, display_path
 from .loaders import load_documents
-from .profile import extract_profile
+from .profile import add_name_parts, extract_profile, load_manual_profile
 
 
 @dataclass
@@ -58,6 +58,10 @@ def build_index(settings: Settings) -> dict:
         f["vectors"].unlink()
 
     profile = extract_profile(docs)
+    manual, manual_warnings = load_manual_profile(settings.data_dir)
+    profile.update(manual)
+    add_name_parts(profile)  # setelah profil.json, supaya nama yang diisi manual ikut dipakai
+    warnings += manual_warnings
     f["profile"].write_text(json.dumps(profile, ensure_ascii=False, indent=2), encoding="utf-8")
 
     by_type: dict[str, dict[str, int]] = {}
@@ -74,6 +78,8 @@ def build_index(settings: Settings) -> dict:
         "n_docs": len(docs),
         "n_chunks": len(chunks),
         "by_type": by_type,
+        # Hanya nama isian dan asalnya, bukan nilainya: meta dicetak di terminal saat ingest.
+        "profile_fields": {k: v["source"]["file"] for k, v in profile.items()},
         "warnings": warnings,
     }
     f["meta"].write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")

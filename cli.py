@@ -68,6 +68,8 @@ def cmd_ingest(args) -> None:
     print(f"{meta['n_docs']} dokumen, {meta['n_chunks']} chunk, embedding: {meta['embed_model']}")
     for doc_type, n in meta["by_type"].items():
         print(f"  {doc_type:<12} {n['dokumen']:>3} dokumen  {n['chunk']:>4} chunk")
+    fields = ", ".join(f"{k} ({src})" for k, src in meta["profile_fields"].items())
+    print(f"Isian profil: {fields or 'tidak ada (CV tidak ditemukan dan profil.json kosong)'}")
     for w in meta["warnings"]:
         print(f"  PERINGATAN: {w}")
 
